@@ -1,3 +1,6 @@
+# v0.1.3
+Further adjustment to Extra Life revival effect
+
 # v0.1.2
 Increase movement check window for Extra Life Revival
 

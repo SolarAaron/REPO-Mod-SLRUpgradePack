@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SolarAaron")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3167160d25a4aeeff555fb48c0614c3a0d4aaf32")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+85cb40635b57716478cb6d47d6ee90dc55825dfc")]
 [assembly: System.Reflection.AssemblyProductAttribute("SLRUpgradePack")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SLRUpgradePack")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

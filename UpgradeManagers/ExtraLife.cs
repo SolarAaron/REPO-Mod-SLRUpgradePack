@@ -41,27 +41,36 @@ public class ExtraLife : MonoBehaviour {
 
     private IEnumerator BeginReviving() {
         yield return new WaitForSecondsRealtime(1f);
-        SLRUpgradePack.Logger.LogInfo($"Reviving {SemiFunc.PlayerGetSteamID(PlayerAvatar)}");
+        SLRUpgradePack.Logger.LogInfo($"Reviving {SemiFunc.PlayerGetName(PlayerAvatar)}");
         var extraLifeUpgrade = SLRUpgradePack.ExtraLifeUpgradeInstance;
         var maxHealthRef = FieldRefAccess<PlayerHealth, int>("maxHealth");
+        
+        while (_isMoving) {
+            var deadTimerRef = FieldRefAccess<PlayerAvatar, float>("deadTimer");
+            deadTimerRef.Invoke(PlayerAvatar) += 1;
+            yield return new WaitForSecondsRealtime(0.1f);
+            SLRUpgradePack.Logger.LogInfo("Pause attempt to revive moving head");
+        }
+        
         PlayerAvatar.Revive();
         PlayerAvatar.playerHealth.HealOther(Mathf.FloorToInt(maxHealthRef.Invoke(PlayerAvatar.playerHealth) * extraLifeUpgrade.RevivePercent.Value / 100f), true);
         extraLifeUpgrade.UpgradeRegister.RemoveLevel(PlayerAvatar);
+        
         reviving = null;
     }
 
     private void Start() {
-        SLRUpgradePack.Logger.LogInfo($"{SemiFunc.PlayerGetSteamID(PlayerAvatar)} has obtained extra lives");
+        SLRUpgradePack.Logger.LogInfo($"{SemiFunc.PlayerGetName(PlayerAvatar)} has obtained extra lives");
         StartCoroutine(MovementCheck());
     }
 
     private IEnumerator MovementCheck() {
         Vector3 currentPosition = PlayerDeathHead.transform.position;
         while (true) {
-            yield return new WaitForSecondsRealtime(0.3f);
+            yield return new WaitForSecondsRealtime(0.5f);
             Vector3 nextPosition = PlayerDeathHead.transform.position;
             _isMoving = Vector3.Distance(currentPosition, nextPosition) >= 0.01f;
-            SLRUpgradePack.Logger.LogDebug($"{SemiFunc.PlayerGetSteamID(PlayerAvatar)} is moving: {_isMoving}");
+            SLRUpgradePack.Logger.LogDebug($"{SemiFunc.PlayerGetName(PlayerAvatar)} is moving: {_isMoving}");
             currentPosition = nextPosition;
         }
     }

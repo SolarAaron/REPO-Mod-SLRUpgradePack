@@ -11,7 +11,7 @@ using UnityEngine;
 
 namespace SLRUpgradePack;
 
-[BepInPlugin("SolarAaron.SLRUpgradePack", "SLRUpgradePack", "0.1.2")]
+[BepInPlugin("SolarAaron.SLRUpgradePack", "SLRUpgradePack", "0.1.3")]
 [BepInDependency(REPOLib.MyPluginInfo.PLUGIN_GUID)]
 [BepInDependency("x753.CustomColors", BepInDependency.DependencyFlags.SoftDependency)]
 public class SLRUpgradePack : BaseUnityPlugin

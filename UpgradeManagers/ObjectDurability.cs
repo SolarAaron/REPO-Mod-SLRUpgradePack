@@ -33,7 +33,7 @@ public class ValuableObjectDurabilityPatch {
             }
             __instance.durabilityPreset = customDurability;
             
-            SLRUpgradePack.Logger.LogDebug($"After calculation with levels {string.Join(",", Upgrades.GetUpgrade("ObjectDurability").PlayerDictionary)}: {__instance.durabilityPreset.durability}");
+            SLRUpgradePack.Logger.LogDebug($"After calculation with levels {string.Join(",", Upgrades.GetUpgrade("ObjectDurability").PlayerDictionary.Select(kvp => (SemiFunc.PlayerGetName(SemiFunc.PlayerAvatarGetFromSteamID(kvp.Key)), kvp.Value)))}: {__instance.durabilityPreset.durability}");
         }
     }
 }

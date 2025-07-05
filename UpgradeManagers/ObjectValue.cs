@@ -70,7 +70,7 @@ public class ValuableObjectValuePatch {
             }
             instance.valuePreset = customValue;
             DollarValueCurrentRef.Invoke(instance) = finalValue;
-            SLRUpgradePack.Logger.LogDebug($"After calculation with levels {string.Join(",", Upgrades.GetUpgrade("ObjectValue").PlayerDictionary)}: {instance.valuePreset.valueMin} - {instance.valuePreset.valueMax} ({DollarValueCurrentRef.Invoke(instance)} / {FixedValueRef.Invoke(instance)})");
+            SLRUpgradePack.Logger.LogDebug($"After calculation with levels {string.Join(",", Upgrades.GetUpgrade("ObjectValue").PlayerDictionary.Select(kvp => (SemiFunc.PlayerGetName(SemiFunc.PlayerAvatarGetFromSteamID(kvp.Key)), kvp.Value)))}: {instance.valuePreset.valueMin} - {instance.valuePreset.valueMax} ({DollarValueCurrentRef.Invoke(instance)} / {FixedValueRef.Invoke(instance)})");
         }
     }
 }

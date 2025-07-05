@@ -6,12 +6,12 @@ The following Upgrades will be added to the shop:
 
 Upgrade reduces damage from enemy and physics hits
 
-## Overcharge Upgrade -- BETA branch only
+## Overcharge Upgrade
 
 Upgrade reduces the speed at which the overcharge meter fills up
 
 ## Object Durability and Value Upgrades
-
+f
 Each upgrade increases resistance and value of objects, separately
 
 ## Valuable Density Upgrade

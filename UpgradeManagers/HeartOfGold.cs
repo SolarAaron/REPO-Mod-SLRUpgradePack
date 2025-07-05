@@ -57,11 +57,11 @@ public class PlayerHealthAddValuePatch {
         heartOfGoldUpgrade.LastHealth = healthRef.Invoke(__instance);
 
         if (!___playerAvatar.healthGrab.TryGetComponent<ValuableObject>(out var valuableComponent) || !valuableComponent || healthRef.Invoke(__instance) <= 0) {
-            SLRUpgradePack.Logger.LogInfo($"Adding valuable component to player {SemiFunc.PlayerGetSteamID(___playerAvatar)}");
+            SLRUpgradePack.Logger.LogInfo($"Adding valuable component to player {SemiFunc.PlayerGetName(___playerAvatar)}");
             
             valuableComponent = ___playerAvatar.healthGrab.gameObject.AddComponent<ValuableObject>();
             
-            SLRUpgradePack.Logger.LogInfo($"Valuable component {SemiFunc.PlayerGetSteamID(___playerAvatar)} instantiated at {JsonConvert.SerializeObject(valuableComponent.transform)}");
+            SLRUpgradePack.Logger.LogInfo($"Valuable component {SemiFunc.PlayerGetName(___playerAvatar)} instantiated at {JsonConvert.SerializeObject(valuableComponent.transform)}");
             
             valuableComponent.valuePreset = ScriptableObject.CreateInstance<Value>();
             valuableComponent.valuePreset.valueMin =

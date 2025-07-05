@@ -86,7 +86,7 @@ public abstract class UpgradeBase<T> {
         if (Traverse.Create(player).Field<bool>("isLocal").Value) {
             UpgradeLevel = level;
             SLRUpgradePack.Logger
-                          .LogInfo($"Init: {string.Join(",", UpgradeRegister.PlayerDictionary)}");
+                          .LogInfo($"Init: {string.Join(",", UpgradeRegister.PlayerDictionary.Select(kvp => (SemiFunc.PlayerGetName(SemiFunc.PlayerAvatarGetFromSteamID(kvp.Key)), kvp.Value)))}");
         }
     }
 
@@ -94,7 +94,7 @@ public abstract class UpgradeBase<T> {
         if (Traverse.Create(player).Field<bool>("isLocal").Value) {
             UpgradeLevel = level;
             SLRUpgradePack.Logger
-                          .LogInfo($"Used: {string.Join(",", UpgradeRegister.PlayerDictionary)}");
+                          .LogInfo($"Used: {string.Join(",", UpgradeRegister.PlayerDictionary.Select(kvp => (SemiFunc.PlayerGetName(SemiFunc.PlayerAvatarGetFromSteamID(kvp.Key)), kvp.Value)))}");
         }
     }
 
