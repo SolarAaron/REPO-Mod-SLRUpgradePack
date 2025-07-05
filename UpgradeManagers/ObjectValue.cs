@@ -16,7 +16,7 @@ namespace SLRUpgradePack.UpgradeManagers;
 public class ObjectValueUpgrade: UpgradeBase<float> {
     public ConfigEntry<bool> UpgradeScalesSurplus { get; protected set; }
     public ObjectValueUpgrade(bool enabled, float upgradeAmount, bool exponential, float exponentialAmount, ConfigFile config, AssetBundle assetBundle, float priceMultiplier) : 
-       base("Object Value", "assets/repo/mods/resources/items/items/item upgrade value.asset", enabled, upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, true, 2000, 100000) {
+       base("Object Value", "assets/repo/mods/resources/items/items/item upgrade value.asset", enabled, upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, true, 2000, 100000, true, false) {
         UpgradeScalesSurplus = config.Bind("Object Value Upgrade", "Scale Surplus Bag", false,
                                      "Should the Object Value Upgrade scale the extraction surplus bag?");
     }

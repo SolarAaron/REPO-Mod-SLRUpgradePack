@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using BepInEx;
 using BepInEx.Logging;
@@ -10,7 +11,9 @@ using UnityEngine;
 
 namespace SLRUpgradePack;
 
-[BepInPlugin("SolarAaron.SLRUpgradePack", "SLRUpgradePack", "0.0.22")]
+[BepInPlugin("SolarAaron.SLRUpgradePack", "SLRUpgradePack", "0.1.2")]
+[BepInDependency(REPOLib.MyPluginInfo.PLUGIN_GUID)]
+[BepInDependency("x753.CustomColors", BepInDependency.DependencyFlags.SoftDependency)]
 public class SLRUpgradePack : BaseUnityPlugin
 {
     internal static SLRUpgradePack Instance { get; private set; } = null!;
@@ -28,6 +31,8 @@ public class SLRUpgradePack : BaseUnityPlugin
     public static ExtraLifeUpgrade ExtraLifeUpgradeInstance { get; private set; }
     public static MapEnemyTrackerUpgrade MapEnemyTrackerUpgradeInstance {  get; private set; }
     public static MapPlayerTrackerUpgrade MapPlayerTrackerUpgradeInstance { get; private set; }
+    public static SprintUsageUpgrade SprintUsageUpgradeInstance { get; private set; }
+    public static MapValueTrackerUpgrade MapValueTrackerUpgradeInstance { get; private set; }
 
     private void Awake()
     {
@@ -58,8 +63,10 @@ public class SLRUpgradePack : BaseUnityPlugin
         RegenerationUpgradeInstance = new RegenerationUpgrade(true, 0.1f, false, 1.1f, Config, assetBundle, .1f, 1.5f);
         ExtraLifeUpgradeInstance = new ExtraLifeUpgrade(true, 0.1f, false, 1.1f, Config, assetBundle, 5, 5f);
 
-        MapEnemyTrackerUpgradeInstance = new MapEnemyTrackerUpgrade(true, 1, false, 0, Config, moreBundle, 4f, false, true, Color.red, "", 2000, 3000);
-        MapPlayerTrackerUpgradeInstance = new MapPlayerTrackerUpgrade(true, 1, false,  0, Config, moreBundle, 4f, false, true, Color.blue, 2000, 3000, false);
+        MapEnemyTrackerUpgradeInstance = new MapEnemyTrackerUpgrade(true, Config, moreBundle, 4f, true, Color.red, "", 2000, 3000);
+        MapPlayerTrackerUpgradeInstance = new MapPlayerTrackerUpgrade(true, Config, moreBundle, 4f, true, Color.blue, 2000, 3000, false);
+        SprintUsageUpgradeInstance = new SprintUsageUpgrade(true, Config, moreBundle, 0.5f, 2000, 3000);
+        MapValueTrackerUpgradeInstance = new MapValueTrackerUpgrade(true, Config, moreBundle, 3.5f, 2000, 3000, true);
         
         Patch();
         Logger.LogInfo($"{Info.Metadata.GUID} v{Info.Metadata.Version} has loaded!");

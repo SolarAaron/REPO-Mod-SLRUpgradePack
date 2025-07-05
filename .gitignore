@@ -13,11 +13,13 @@
 /dataSources.local.xml
 /Assets/REPO/Game
 /Assets/REPO/Plugins
-/Assets/REPO/TextMesh Pro
 /bin
 /obj
-/package/skel/plugins
+/package/skel/plugins/
 /package/SLRUpgradePack.zip
 /Directory.Repo.props
 /Folder.DotSettings.user
 /SLRUpgradePack.csproj.DotSettings
+/Assets/TextMesh Pro/
+/Assets/REPO/Game.meta
+/Assets/REPO/Plugins.meta

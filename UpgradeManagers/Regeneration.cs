@@ -11,7 +11,7 @@ public class RegenerationUpgrade: UpgradeBase<float> {
     internal float PendingHealing = 0;
     
     public RegenerationUpgrade(bool enabled, float upgradeAmount, bool exponential, float exponentialAmount,
-                               ConfigFile config, AssetBundle assetBundle, float baseHealing, float priceMultiplier): base("Regeneration", "assets/repo/mods/resources/items/items/item upgrade regeneration.asset", enabled, upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, true, 2000, 100000) {
+                               ConfigFile config, AssetBundle assetBundle, float baseHealing, float priceMultiplier): base("Regeneration", "assets/repo/mods/resources/items/items/item upgrade regeneration.asset", enabled, upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, true, 2000, 100000, true, false) {
         BaseHealing = config.Bind("Regeneration Upgrade", "Base Healing", baseHealing, new ConfigDescription("Base Healing Amount", new AcceptableValueRange<float>(0f, 10f)) );
     }
 

@@ -24,12 +24,12 @@ public class MapEnemyTrackerUpgrade : UpgradeBase<int> {
     private AssetBundle assetBundle;
     private EnemyTrackerComponent enemyTrackerComponent;
 
-    public MapEnemyTrackerUpgrade(bool enabled, int upgradeAmount, bool exponential, int exponentialAmount, ConfigFile config, AssetBundle assetBundle, float priceMultiplier, bool configureAmount, bool arrowIcon, Color trackerColor,
+    public MapEnemyTrackerUpgrade(bool enabled, ConfigFile config, AssetBundle assetBundle, float priceMultiplier, bool arrowIcon, Color trackerColor,
                                   string excludeEnemies, int minPrice, int maxPrice) :
-        base("Map Enemy Tracker", "Map Enemy Tracker", enabled, upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, configureAmount, minPrice, maxPrice) {
-        ArrowIcon = config.Bind("Map Enemy Tracker", "Arrow Icon", arrowIcon, "Whether the icon should appear as an arrow showing direction instead of a dot.");
-        TrackerColor = config.Bind("Map Enemy Tracker", "Color", trackerColor, "The color of the icon.");
-        ExcludeEnemies = config.Bind("Map Enemy Tracker", "Exclude Enemies", excludeEnemies, "Exclude specific enemies from displaying their icon by listing their names." +
+        base("Map Enemy Tracker", "Map Enemy Tracker", enabled, 1, false, 1, config, assetBundle, priceMultiplier, false, minPrice, maxPrice, false, true) {
+        ArrowIcon = config.Bind("Map Enemy Tracker Upgrade", "Arrow Icon", arrowIcon, "Whether the icon should appear as an arrow showing direction instead of a dot.");
+        TrackerColor = config.Bind("Map Enemy Tracker Upgrade", "Color", trackerColor, "The color of the icon.");
+        ExcludeEnemies = config.Bind("Map Enemy Tracker Upgrade", "Exclude Enemies", excludeEnemies, "Exclude specific enemies from displaying their icon by listing their names." +
                                                                                              "\nExample: 'Gnome, Clown', seperated by commas.");
 
         this.assetBundle = assetBundle;

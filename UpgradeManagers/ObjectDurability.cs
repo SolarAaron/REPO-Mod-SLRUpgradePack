@@ -9,7 +9,7 @@ namespace SLRUpgradePack.UpgradeManagers;
 
 public class ObjectDurabilityUpgrade: UpgradeBase<float> {
     public ObjectDurabilityUpgrade(bool enabled, float upgradeAmount, bool exponential, float exponentialAmount, ConfigFile config, AssetBundle assetBundle, float priceMultiplier) : 
-        base("Object Durability", "assets/repo/mods/resources/items/items/item upgrade durability.asset", enabled, upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, true, 2000, 100000) {
+        base("Object Durability", "assets/repo/mods/resources/items/items/item upgrade durability.asset", enabled, upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, true, 2000, 100000, true, false) {
     }
 
     public override float Calculate (float value, PlayerAvatar player, int level) => DefaultCalculateFloatIncrease(this, "ObjectDurability", value, player, level);

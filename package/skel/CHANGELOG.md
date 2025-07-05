@@ -1,3 +1,15 @@
+# v0.1.2
+Increase movement check window for Extra Life Revival
+
+# v0.1.1
+## More Upgrades
+### Upgrades from the deprecated mod "More Upgrades" have been integrated and will be supported within this mod
+* Added Sprint Usage Upgrade
+* Added Map Enemy Tracker Upgrade
+* Added Map Player Tracker Upgrade
+* Added Map Value Tracker Upgrade -- formerly known as Valuable Count Upgrade
+* REALLY fixed object value not having effect
+
 # v0.0.22
 Fixed object value not having any effect
 

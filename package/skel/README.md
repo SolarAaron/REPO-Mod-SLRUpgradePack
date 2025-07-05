@@ -29,3 +29,21 @@ Upgrade gradualy restores player's health, starting at 1 hp/second
 ## Extra Life Upgrade
 
 Revives a player once per upgraded level. Upgrade levels are lost on reviving!
+
+## MoreUpgrades
+
+### Sprint Usage Upgrade
+
+Reduces sprint usage for each level
+
+### Map Player Tracker Upgrade
+
+Shows other players on the map
+
+### Map Enemy Tracker Upgrade
+
+Shows positions of enemies on the map
+
+### Map Value Tracker Upgrade
+
+Shows valuables left on the map and (optionally) how much they're worth

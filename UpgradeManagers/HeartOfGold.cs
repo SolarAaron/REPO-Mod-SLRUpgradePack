@@ -19,7 +19,7 @@ public class HeartOfGoldUpgrade : UpgradeBase<float> {
     public HeartOfGoldUpgrade(bool enabled, float upgradeAmount, bool exponential, float exponentialAmount,
                               ConfigFile config, AssetBundle assetBundle, float baseValue, float priceMultiplier) :
         base("Heart Of Gold", "assets/repo/mods/resources/items/items/item upgrade heart of gold.asset", enabled,
-             upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, true, 2000, 100000) {
+             upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, true, 2000, 100000, true, false) {
         BaseHeartValue =
             config.Bind("Heart Of Gold Upgrade", "Base Value", baseValue, "Base value to scale by player health");
         LastHealth = -1;

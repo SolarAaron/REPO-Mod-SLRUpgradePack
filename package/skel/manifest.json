@@ -1,7 +1,7 @@
 {
   "name": "SLRUpgradePack",
-  "version_number": "0.0.22",
-  "website_url": "",
+  "version_number": "0.1.2",
+  "website_url": "https://github.com/SolarAaron/REPO-Mod-SLRUpgradePack",
   "description": "Adds multiple upgrades to the shop",
   "dependencies": [
     "BepInEx-BepInExPack-5.4.2100",

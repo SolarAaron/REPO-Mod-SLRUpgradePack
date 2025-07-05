@@ -7,6 +7,7 @@ using BepInEx.Configuration;
 using HarmonyLib;
 using REPOLib.Modules;
 using UnityEngine;
+using UnityEngine.Events;
 using static HarmonyLib.AccessTools;
 
 namespace SLRUpgradePack.UpgradeManagers;
@@ -19,23 +20,26 @@ public abstract class UpgradeBase<T> {
     public ConfigEntry<float> PriceMultiplier { get; protected set; }
     public ConfigEntry<int> MinPrice { get; protected set; }
     public ConfigEntry<int> MaxPrice { get; protected set; }
+    public bool IsIntegration { get; private set; }
     public int UpgradeLevel { get; protected set; }
     public PlayerUpgrade UpgradeRegister { get; protected set; }
 
-    protected UpgradeBase(string name, string assetName, bool enabled, T upgradeAmount, bool exponential, T exponentialAmount, ConfigFile config, AssetBundle assetBundle, float priceMultiplier, bool configureAmount, int minPrice, int maxPrice) {
+    protected UpgradeBase(string name, string assetName, bool enabled, T upgradeAmount, bool exponential, T exponentialAmount, ConfigFile config, AssetBundle assetBundle, float priceMultiplier, bool configureAmount, int minPrice, int maxPrice, bool canBeExponential, bool singleUse) {
+        IsIntegration = false;
+        
         UpgradeEnabled = config.Bind($"{name} Upgrade", "Enabled", enabled,
                                      $"Should the {name} Upgrade be enabled?");
         PriceMultiplier = config.Bind($"{name} Upgrade", "Price multiplier", priceMultiplier, "Multiplier of upgrade base price");
-        if(configureAmount)
+        if(configureAmount) {
             UpgradeAmount = config.Bind($"{name} Upgrade", $"{name} Upgrade Power", upgradeAmount,
-                                    $"How much the {name} Upgrade increments");
-        if(configureAmount)
-            UpgradeExponential = config.Bind($"{name} Upgrade", "Exponential upgrade", exponential,
-                                         $"Should the {name} Upgrade stack exponentially?");
-        if(configureAmount)
-            UpgradeExpAmount = config.Bind($"{name} Upgrade", $"{name} Upgrade Exponential Power", exponentialAmount,
-                                       $"How much the Exponential {name} upgrade increments");
-
+                                        $"How much the {name} Upgrade increments");
+            if(canBeExponential) {
+                UpgradeExponential = config.Bind($"{name} Upgrade", "Exponential upgrade", exponential,
+                                                 $"Should the {name} Upgrade stack exponentially?");
+                UpgradeExpAmount = config.Bind($"{name} Upgrade", $"{name} Upgrade Exponential Power", exponentialAmount,
+                                               $"How much the Exponential {name} upgrade increments");
+            }
+        }
         if (UpgradeEnabled.Value) {
             Item upgradeItem = assetBundle.LoadAsset<Item>(assetName);
             
@@ -47,6 +51,10 @@ public abstract class UpgradeBase<T> {
                 
                 upgradeItem.value.valueMin = MinPrice.Value;
                 upgradeItem.value.valueMax = MaxPrice.Value;
+                upgradeItem.maxAmountInShop = !singleUse ? 2 : 1;
+                upgradeItem.maxAmount = !singleUse ? 10 : 1;
+                upgradeItem.maxPurchaseAmount = !singleUse ? 0 : 1;
+                upgradeItem.maxPurchase = singleUse;
             }
 
             if (upgradeItem.prefab == null) { // it's a moreupgrades integration
@@ -59,9 +67,7 @@ public abstract class UpgradeBase<T> {
             if (!upgradeItem.prefab.TryGetComponent<REPOLibItemUpgrade>(out var libItemUpgrade)) { // it's a moreupgrades integration
                 libItemUpgrade = upgradeItem.prefab.AddComponent<REPOLibItemUpgrade>();
                 FieldRefAccess<REPOLibItemUpgrade, string>("_upgradeId").Invoke(libItemUpgrade) = name.Replace(" ", "");
-                var itemUpgradeComponent = upgradeItem.prefab.GetComponent<ItemUpgrade>();
-                itemUpgradeComponent.upgradeEvent.RemoveAllListeners();
-                itemUpgradeComponent.upgradeEvent.AddListener(libItemUpgrade.Upgrade);
+                IsIntegration = true;
             }
             
             SLRUpgradePack.Logger.LogInfo($"Upgrade price range (default) {upgradeItem.value.valueMin} - {upgradeItem.value.valueMax}");

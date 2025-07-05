@@ -13,7 +13,7 @@ public class ExtraLifeUpgrade: UpgradeBase<float> {
     public ExtraLifeUpgrade(bool enabled, float upgradeAmount, bool exponential, float exponentialAmount,
                      ConfigFile config, AssetBundle assetBundle, int revivePercent, float priceMultiplier) :
     base("Extra Life", "assets/repo/mods/resources/items/items/item upgrade extra life.asset", enabled,
-    upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, false, 2000, 100000){
+    upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, false, 2000, 100000, true, false){
         RevivePercent = config.Bind("Extra Life Upgrade", "revivePercent", revivePercent, "Percentage of health to recover when revived");
     }
 
@@ -40,7 +40,7 @@ public class ExtraLife : MonoBehaviour {
     }
 
     private IEnumerator BeginReviving() {
-        yield return new WaitForSeconds(1f);
+        yield return new WaitForSecondsRealtime(1f);
         SLRUpgradePack.Logger.LogInfo($"Reviving {SemiFunc.PlayerGetSteamID(PlayerAvatar)}");
         var extraLifeUpgrade = SLRUpgradePack.ExtraLifeUpgradeInstance;
         var maxHealthRef = FieldRefAccess<PlayerHealth, int>("maxHealth");
@@ -58,7 +58,7 @@ public class ExtraLife : MonoBehaviour {
     private IEnumerator MovementCheck() {
         Vector3 currentPosition = PlayerDeathHead.transform.position;
         while (true) {
-            yield return new WaitForSeconds(0.1f);
+            yield return new WaitForSecondsRealtime(0.3f);
             Vector3 nextPosition = PlayerDeathHead.transform.position;
             _isMoving = Vector3.Distance(currentPosition, nextPosition) >= 0.01f;
             SLRUpgradePack.Logger.LogDebug($"{SemiFunc.PlayerGetSteamID(PlayerAvatar)} is moving: {_isMoving}");

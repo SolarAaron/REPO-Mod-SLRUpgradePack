@@ -23,7 +23,7 @@ public class ValuableDensityUpgrade : UpgradeBase<float> {
     public ValuableDensityUpgrade(bool enabled, float upgradeAmount, bool exponential, float exponentialAmount,
                                  ConfigFile config, AssetBundle assetBundle, float priceMultiplier) :
         base("Valuable Density", "assets/repo/mods/resources/items/items/item upgrade valuable density.asset", enabled,
-             upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, true, 2000, 100000) {
+             upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, true, 2000, 100000, true, false) {
     }
 
     public override float Calculate(float value, PlayerAvatar player, int level) =>

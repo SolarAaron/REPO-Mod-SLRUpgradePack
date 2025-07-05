@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using BepInEx.Bootstrap;
 using BepInEx.Configuration;
+using CustomColors;
 using HarmonyLib;
 using REPOLib;
 using UnityEngine;
@@ -24,11 +27,11 @@ public class MapPlayerTrackerUpgrade : UpgradeBase<int> {
     private AssetBundle assetBundle;
     private PlayerTrackerComponent playerTrackerComponent;
 
-    public MapPlayerTrackerUpgrade(bool enabled, int upgradeAmount, bool exponential, int exponentialAmount, ConfigFile config, AssetBundle assetBundle, float priceMultiplier, bool configureAmount, bool arrowIcon, Color trackerColor, int minPrice, int maxPrice, bool playerColor) :
-        base("Map Player Tracker", "Map Player Tracker", enabled, upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, configureAmount, minPrice, maxPrice) {
-        ArrowIcon = config.Bind("Map Player Tracker", "Arrow Icon", arrowIcon, "Whether the icon should appear as an arrow showing direction instead of a dot.");
-        PlayerColor = config.Bind("Map Player Tracker", "Player Color", playerColor, "Whether the icon should be colored as the player.");
-        TrackerColor = config.Bind("Map Player Tracker", "Color", trackerColor, "The color of the icon.");
+    public MapPlayerTrackerUpgrade(bool enabled, ConfigFile config, AssetBundle assetBundle, float priceMultiplier, bool arrowIcon, Color trackerColor, int minPrice, int maxPrice, bool playerColor) :
+        base("Map Player Tracker", "Map Player Tracker", enabled, 1, false, 1, config, assetBundle, priceMultiplier, false, minPrice, maxPrice, true, true) {
+        ArrowIcon = config.Bind("Map Player Tracker Upgrade", "Arrow Icon", arrowIcon, "Whether the icon should appear as an arrow showing direction instead of a dot.");
+        PlayerColor = config.Bind("Map Player Tracker Upgrade", "Player Color", playerColor, "Whether the icon should be colored as the player.");
+        TrackerColor = config.Bind("Map Player Tracker Upgrade", "Color", trackerColor, "The color of the icon.");
 
         this.assetBundle = assetBundle;
     }
@@ -144,6 +147,28 @@ internal class PlayerAvatarPatch
         {
             mapPlayerTrackerUpgrade.RemovePlayerFromMap(__instance);
             mapPlayerTrackerUpgrade.AddPlayerToMap(__instance);
+        }
+    }
+    
+    [HarmonyPatch(typeof(CustomColorsMod.ModdedColorPlayerAvatar))]
+    internal class ModdedColorPlayerAvatarPatch
+    {
+        public static bool Prepare() {
+            return Chainloader.PluginInfos.ContainsKey("x753.CustomColors");
+        }
+        
+        [HarmonyPatch("ModdedSetColorRPC")]
+        static void Postfix(CustomColorsMod.ModdedColorPlayerAvatar __instance)
+        {
+            var mapPlayerTrackerUpgrade = SLRUpgradePack.MapPlayerTrackerUpgradeInstance;
+            if (mapPlayerTrackerUpgrade.UpgradeEnabled.Value == false || mapPlayerTrackerUpgrade.UpgradeLevel == 0)
+                return;
+            PlayerAvatar playerAvatar = __instance.avatar;
+            if (mapPlayerTrackerUpgrade.UpgradeLevel > 0 && mapPlayerTrackerUpgrade.PlayerColor.Value)
+            {
+                mapPlayerTrackerUpgrade.RemovePlayerFromMap(playerAvatar);
+                mapPlayerTrackerUpgrade.AddPlayerToMap(playerAvatar);
+            }
         }
     }
 }

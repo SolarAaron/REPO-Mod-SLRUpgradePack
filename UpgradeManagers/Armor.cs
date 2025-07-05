@@ -8,7 +8,7 @@ namespace SLRUpgradePack.UpgradeManagers;
 
 public class ArmorUpgrade: UpgradeBase<float> {
     public ArmorUpgrade(bool enabled, float upgradeAmount, bool exponential, float exponentialAmount, ConfigFile config, AssetBundle assetBundle, float priceMultiplier) : 
-        base("Armor", "assets/repo/mods/resources/items/items/item upgrade armor.asset", enabled, upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, true, 2000, 100000) {
+        base("Armor", "assets/repo/mods/resources/items/items/item upgrade armor.asset", enabled, upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, true, 2000, 100000, true, false) {
     }
     
     public override float Calculate (float value, PlayerAvatar player, int level) => DefaultCalculateFloatReduce(this, "Armor", value, player, level);
