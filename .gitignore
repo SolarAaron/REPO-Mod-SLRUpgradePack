@@ -1,0 +1,23 @@
+# Default ignored files
+/shelf/
+/workspace.xml
+# Rider ignored files
+/.idea
+/contentModel.xml
+/modules.xml
+/projectSettingsUpdater.xml
+# Editor-based HTTP Client requests
+/httpRequests/
+# Datasource local storage ignored files
+/dataSources/
+/dataSources.local.xml
+/Assets/REPO/Game
+/Assets/REPO/Plugins
+/Assets/REPO/TextMesh Pro
+/bin
+/obj
+/package/skel/plugins
+/package/SLRUpgradePack.zip
+/Directory.Repo.props
+/Folder.DotSettings.user
+/SLRUpgradePack.csproj.DotSettings

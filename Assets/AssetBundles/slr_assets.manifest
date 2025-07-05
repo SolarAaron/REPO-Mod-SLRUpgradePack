@@ -1,0 +1,163 @@
+ManifestFileVersion: 0
+CRC: 1100411614
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: 3ec01f4c6b5dfe5cbd9ed3d9a762468e
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: 71e866d9f044ba1c3a49e554c5d53806
+  IncrementalBuildHash:
+    serializedVersion: 2
+    Hash: 3ec01f4c6b5dfe5cbd9ed3d9a762468e
+HashAppended: 0
+ClassTypes:
+- Class: 1
+  Script: {instanceID: 0}
+- Class: 4
+  Script: {instanceID: 0}
+- Class: 21
+  Script: {instanceID: 0}
+- Class: 23
+  Script: {instanceID: 0}
+- Class: 28
+  Script: {instanceID: 0}
+- Class: 33
+  Script: {instanceID: 0}
+- Class: 43
+  Script: {instanceID: 0}
+- Class: 48
+  Script: {instanceID: 0}
+- Class: 54
+  Script: {instanceID: 0}
+- Class: 65
+  Script: {instanceID: 0}
+- Class: 82
+  Script: {instanceID: 0}
+- Class: 83
+  Script: {instanceID: 0}
+- Class: 108
+  Script: {instanceID: 0}
+- Class: 114
+  Script: {fileID: 11500000, guid: d5c52f3f27e83a44bfbbdc719ca5bf0f, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: 3d0893f666540582cc8e6192b9b0efaa, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: a8fc605d86e253c130d95b9eb74debf5, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: 5ab8f401ece3e057ce511d64ce84d618, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: 5fe79f55a9764e760e5c64281f543eb0, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: 9b92d0a529fd83f8597297eac8c68a10, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: ff1df5370f7af74f11d71ad866fd0a19, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: a2e3fc4316c5898b5096a51406a41294, type: 3}
+- Class: 114
+  Script: {fileID: -1558716956, guid: c0b20f7094627da40b5164c5563cc3d9, type: 3}
+- Class: 114
+  Script: {fileID: 1072720772, guid: c0b20f7094627da40b5164c5563cc3d9, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: 72bb657e63785f44f51afd88d9713a59, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: c30496d6ae6d6f907456e10a94e01ec6, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: aaea9639410203bd1cce2bb7f59ba556, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: bb8c5cd85de75894096f8ffb1f03f295, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: 3e94dcf3314020481f880b97f02fc505, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: f0727eaa6b245c79a70270919f6fe72c, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: a3c5831920c47b179b189f39981a1023, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: 34273b7af6b67c13e8b13e0904f11dca, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: 1dc612d23e30bc425c249e877f0d02db, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: 02942ab980045f4bc14fcfe6eb84b28f, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: 627a013663f820c93f7430687080fd1d, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: 5d1570d4589cf6daac40294b9f5544ba, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: a15e1c781475aa01b4927595581aa78d, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: 328afba7744a086ddaa619a79c16685d, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: c60312014fde116a7e06d1e78f69a71d, type: 3}
+- Class: 115
+  Script: {instanceID: 0}
+- Class: 120
+  Script: {instanceID: 0}
+- Class: 134
+  Script: {instanceID: 0}
+- Class: 169
+  Script: {instanceID: 0}
+- Class: 198
+  Script: {instanceID: 0}
+- Class: 199
+  Script: {instanceID: 0}
+- Class: 213
+  Script: {instanceID: 0}
+- Class: 241
+  Script: {instanceID: 0}
+- Class: 243
+  Script: {instanceID: 0}
+- Class: 245
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers:
+- AssemblyName: Assembly-CSharp
+  ClassName: Sound
+- AssemblyName: UnityEngine.CoreModule
+  ClassName: UnityEngine.Events.ArgumentCache
+- AssemblyName: UnityEngine.CoreModule
+  ClassName: UnityEngine.Events.PersistentCallGroup
+- AssemblyName: UnityEngine.CoreModule
+  ClassName: UnityEngine.Events.PersistentListenerMode
+- AssemblyName: UnityEngine.CoreModule
+  ClassName: UnityEngine.Events.UnityEvent
+Assets:
+- Assets/REPO/Mods/Resources/items/Item Upgrade Durability.prefab
+- Assets/REPO/Mods/Materials/upgrade_regeneration.mat
+- Assets/REPO/Mods/Resources/items/Item Upgrade Extra Life.prefab
+- Assets/REPO/Mods/Materials/upgrade_heart_of_gold.mat
+- Assets/REPO/Mods/Resources/items/Item Upgrade Armor.prefab
+- Assets/REPO/Mods/Materials/upgrade_durability.mat
+- Assets/REPO/Mods/Resources/items/items/Item Upgrade Heart Of Gold.asset
+- Assets/REPO/Mods/Resources/items/Item Upgrade Regeneration.prefab
+- Assets/REPO/Mods/Resources/items/items/Item Upgrade Regeneration Lib.asset
+- Assets/REPO/Mods/Materials/upgrade_value.mat
+- Assets/REPO/Mods/Resources/items/Item Upgrade Heart Of Gold.prefab
+- Assets/REPO/Mods/Resources/items/items/Item Upgrade Durability Lib.asset
+- Assets/REPO/Mods/Resources/items/items/Item Upgrade Extra Life Lib.asset
+- Assets/REPO/Mods/Resources/items/items/Item Upgrade Armor Lib.asset
+- Assets/REPO/Mods/Resources/items/items/Item Upgrade Durability.asset
+- Assets/REPO/Mods/Resources/items/items/Item Upgrade Value Lib.asset
+- Assets/REPO/Mods/Resources/items/items/Item Upgrade Overcharge Lib.asset
+- Assets/REPO/Mods/Resources/items/items/Item Upgrade Valuable Density Lib.asset
+- Assets/REPO/Mods/Resources/items/Item Upgrade Valuable Density.prefab
+- Assets/REPO/Mods/Materials/upgrade_armor.mat
+- Assets/REPO/Mods/Materials/upgrade_valuable.mat
+- Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Value_Albedo.png
+- Assets/REPO/Mods/Resources/items/items/Item Upgrade Valuable Density.asset
+- Assets/REPO/Mods/Resources/items/Item Upgrade Value.prefab
+- Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Regeneration_Albedo.png
+- Assets/REPO/Mods/Resources/items/items/Item Upgrade Armor.asset
+- Assets/REPO/Mods/Materials/upgrade_extra_life.mat
+- Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Overcharge_Albedo.png
+- Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Heart_Of_Gold_Albedo.png
+- Assets/REPO/Mods/Resources/items/items/Item Upgrade Value.asset
+- Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Durability_Albedo.png
+- Assets/REPO/Mods/Materials/upgrade_overcharge.mat
+- Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Valuable_Albedo.png
+- Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Extra_Life_Albedo.png
+- Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Armor_Albedo.png
+- Assets/REPO/Mods/Resources/items/items/Item Upgrade Extra Life.asset
+- Assets/REPO/Mods/Resources/items/items/Item Upgrade Regeneration.asset
+- Assets/REPO/Mods/Resources/items/items/Item Upgrade Overcharge.asset
+- Assets/REPO/Mods/Resources/items/Item Upgrade Overcharge.prefab
+- Assets/REPO/Mods/Resources/items/items/Item Upgrade Heart Of Gold Lib.asset
+Dependencies: []
