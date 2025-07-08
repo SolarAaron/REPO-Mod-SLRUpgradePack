@@ -1,6 +1,6 @@
 {
   "name": "SLRUpgradePack",
-  "version_number": "0.1.3",
+  "version_number": "0.1.4",
   "website_url": "https://github.com/SolarAaron/REPO-Mod-SLRUpgradePack",
   "description": "Adds multiple upgrades to the shop",
   "dependencies": [

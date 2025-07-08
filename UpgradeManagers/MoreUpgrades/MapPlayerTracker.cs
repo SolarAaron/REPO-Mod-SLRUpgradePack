@@ -1,12 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using CustomColors;
 using HarmonyLib;
-using REPOLib;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -37,12 +35,11 @@ public class MapPlayerTrackerUpgrade : UpgradeBase<int> {
     }
 
     public override int Calculate(int value, PlayerAvatar player, int level) {
-        throw new System.NotImplementedException();
+        throw new NotImplementedException();
     }
 
-    internal void AddPlayerToMap(PlayerAvatar playerAvatar)
-    {
-        if (UpgradeLevel == 0)
+    internal void AddPlayerToMap(PlayerAvatar playerAvatar) {
+        if (UpgradeRegister.GetLevel(SemiFunc.PlayerAvatarLocal()) == 0)
             return;
         GameObject visuals = GetVisualsFromComponent(playerAvatar);
         if (visuals == null || addToMap.Any(x => x.Item1 == visuals))
@@ -55,9 +52,8 @@ public class MapPlayerTrackerUpgrade : UpgradeBase<int> {
         addToMap.Add((visuals, color));
     }
 
-    internal void RemovePlayerFromMap(PlayerAvatar playerAvatar)
-    {
-        if (UpgradeLevel == 0)
+    internal void RemovePlayerFromMap(PlayerAvatar playerAvatar) {
+        if (UpgradeRegister.GetLevel(SemiFunc.PlayerAvatarLocal()) == 0)
             return;
         GameObject visuals = GetVisualsFromComponent(playerAvatar);
         if (visuals == null || removeFromMap.Contains(visuals))
@@ -66,12 +62,10 @@ public class MapPlayerTrackerUpgrade : UpgradeBase<int> {
             addToMap.RemoveAll(x => x.Item1 == visuals);
         removeFromMap.Add(visuals);
     }
-    
-    internal void UpdateTracker()
-    {
-        if (SemiFunc.PlayerAvatarLocal() != null && UpgradeLevel > 0) {
-            for (int i = addToMap.Count - 1; i >= 0; i--)
-            {
+
+    internal void UpdateTracker() {
+        if (SemiFunc.PlayerAvatarLocal() != null && UpgradeRegister.GetLevel(SemiFunc.PlayerAvatarLocal()) > 0) {
+            for (int i = addToMap.Count - 1; i >= 0; i--) {
                 (GameObject gameObject, Color color) = addToMap[i];
                 addToMap.RemoveAt(i);
                 MapCustom mapCustom = gameObject.GetComponent<MapCustom>();
@@ -79,11 +73,10 @@ public class MapPlayerTrackerUpgrade : UpgradeBase<int> {
                     continue;
                 mapCustom = gameObject.AddComponent<MapCustom>();
                 mapCustom.color = color;
-                mapCustom.sprite = ArrowIcon.Value ? assetBundle.LoadAsset<Sprite>("Map Tracker") :
-                                       SemiFunc.PlayerAvatarLocal().playerDeathHead.mapCustom.sprite;
+                mapCustom.sprite = ArrowIcon.Value ? assetBundle.LoadAsset<Sprite>("Map Tracker") : SemiFunc.PlayerAvatarLocal().playerDeathHead.mapCustom.sprite;
             }
-            for (int i = removeFromMap.Count - 1; i >= 0; i--)
-            {
+
+            for (int i = removeFromMap.Count - 1; i >= 0; i--) {
                 GameObject gameObject = removeFromMap[i];
                 removeFromMap.RemoveAt(i);
                 MapCustom mapCustom = gameObject.GetComponent<MapCustom>();
@@ -95,77 +88,68 @@ public class MapPlayerTrackerUpgrade : UpgradeBase<int> {
         }
     }
 
-    protected override void InitUpgrade(PlayerAvatar player, int level) {
+    internal override void InitUpgrade(PlayerAvatar player, int level) {
         base.InitUpgrade(player, level);
-        
-        if(playerTrackerComponent != null) Object.Destroy(playerTrackerComponent);
+
+        if (playerTrackerComponent != null) Object.Destroy(playerTrackerComponent);
         playerTrackerComponent = new GameObject().AddComponent<PlayerTrackerComponent>();
     }
 }
 
 [HarmonyPatch(typeof(PlayerAvatar))]
-internal class PlayerAvatarPatch
-{
+internal class PlayerAvatarPatch {
     [HarmonyPatch("LateStart")]
     [HarmonyPostfix]
-    static void LateStart(PlayerAvatar __instance)
-    {
+    static void LateStart(PlayerAvatar __instance) {
         var mapPlayerTrackerUpgrade = SLRUpgradePack.MapPlayerTrackerUpgradeInstance;
-        if (mapPlayerTrackerUpgrade.UpgradeEnabled.Value == false || mapPlayerTrackerUpgrade.UpgradeLevel == 0)
+        if (mapPlayerTrackerUpgrade.UpgradeEnabled.Value == false || mapPlayerTrackerUpgrade.UpgradeRegister.GetLevel(SemiFunc.PlayerAvatarLocal()) == 0)
             return;
         mapPlayerTrackerUpgrade.AddPlayerToMap(__instance);
     }
 
     [HarmonyPatch("ReviveRPC")]
     [HarmonyPostfix]
-    static void ReviveRPC(PlayerAvatar __instance)
-    {
+    static void ReviveRPC(PlayerAvatar __instance) {
         var mapPlayerTrackerUpgrade = SLRUpgradePack.MapPlayerTrackerUpgradeInstance;
-        if (mapPlayerTrackerUpgrade.UpgradeEnabled.Value == false || mapPlayerTrackerUpgrade.UpgradeLevel == 0)
+        if (mapPlayerTrackerUpgrade.UpgradeEnabled.Value == false || mapPlayerTrackerUpgrade.UpgradeRegister.GetLevel(SemiFunc.PlayerAvatarLocal()) == 0)
             return;
         mapPlayerTrackerUpgrade.AddPlayerToMap(__instance);
     }
 
     [HarmonyPatch("PlayerDeathRPC")]
     [HarmonyPostfix]
-    static void PlayerDeathRPC(PlayerAvatar __instance)
-    {
+    static void PlayerDeathRPC(PlayerAvatar __instance) {
         var mapPlayerTrackerUpgrade = SLRUpgradePack.MapPlayerTrackerUpgradeInstance;
-        if (mapPlayerTrackerUpgrade.UpgradeEnabled.Value == false || mapPlayerTrackerUpgrade.UpgradeLevel == 0)
+        if (mapPlayerTrackerUpgrade.UpgradeEnabled.Value == false || mapPlayerTrackerUpgrade.UpgradeRegister.GetLevel(SemiFunc.PlayerAvatarLocal()) == 0)
             return;
         mapPlayerTrackerUpgrade.RemovePlayerFromMap(__instance);
     }
 
     [HarmonyPatch("SetColorRPC")]
     [HarmonyPostfix]
-    static void SetColorRPC(PlayerAvatar __instance)
-    {
+    static void SetColorRPC(PlayerAvatar __instance) {
         var mapPlayerTrackerUpgrade = SLRUpgradePack.MapPlayerTrackerUpgradeInstance;
-        if (mapPlayerTrackerUpgrade.UpgradeEnabled.Value == false || mapPlayerTrackerUpgrade.UpgradeLevel == 0)
+        if (mapPlayerTrackerUpgrade.UpgradeEnabled.Value == false || mapPlayerTrackerUpgrade.UpgradeRegister.GetLevel(SemiFunc.PlayerAvatarLocal()) == 0)
             return;
-        if (mapPlayerTrackerUpgrade.PlayerColor.Value)
-        {
+        if (mapPlayerTrackerUpgrade.PlayerColor.Value) {
             mapPlayerTrackerUpgrade.RemovePlayerFromMap(__instance);
             mapPlayerTrackerUpgrade.AddPlayerToMap(__instance);
         }
     }
-    
+
     [HarmonyPatch(typeof(CustomColorsMod.ModdedColorPlayerAvatar))]
-    internal class ModdedColorPlayerAvatarPatch
-    {
+    internal class ModdedColorPlayerAvatarPatch {
         public static bool Prepare() {
             return Chainloader.PluginInfos.ContainsKey("x753.CustomColors");
         }
-        
+
         [HarmonyPatch("ModdedSetColorRPC")]
-        static void Postfix(CustomColorsMod.ModdedColorPlayerAvatar __instance)
-        {
+        static void Postfix(CustomColorsMod.ModdedColorPlayerAvatar __instance) {
             var mapPlayerTrackerUpgrade = SLRUpgradePack.MapPlayerTrackerUpgradeInstance;
-            if (mapPlayerTrackerUpgrade.UpgradeEnabled.Value == false || mapPlayerTrackerUpgrade.UpgradeLevel == 0)
+            if (mapPlayerTrackerUpgrade.UpgradeEnabled.Value == false || mapPlayerTrackerUpgrade.UpgradeRegister.GetLevel(SemiFunc.PlayerAvatarLocal()) == 0)
                 return;
             PlayerAvatar playerAvatar = __instance.avatar;
-            if (mapPlayerTrackerUpgrade.UpgradeLevel > 0 && mapPlayerTrackerUpgrade.PlayerColor.Value)
-            {
+            if (mapPlayerTrackerUpgrade.UpgradeRegister.GetLevel(SemiFunc.PlayerAvatarLocal()) > 0 && mapPlayerTrackerUpgrade.PlayerColor.Value) {
                 mapPlayerTrackerUpgrade.RemovePlayerFromMap(playerAvatar);
                 mapPlayerTrackerUpgrade.AddPlayerToMap(playerAvatar);
             }

@@ -1,3 +1,6 @@
+# v0.1.4
+Fix logging when player disconnects from lobby
+
 # v0.1.3
 Further adjustment to Extra Life revival effect
 

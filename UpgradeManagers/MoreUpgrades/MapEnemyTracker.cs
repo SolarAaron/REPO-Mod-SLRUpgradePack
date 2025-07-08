@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using BepInEx.Configuration;
 using HarmonyLib;
-using REPOLib;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -30,17 +29,17 @@ public class MapEnemyTrackerUpgrade : UpgradeBase<int> {
         ArrowIcon = config.Bind("Map Enemy Tracker Upgrade", "Arrow Icon", arrowIcon, "Whether the icon should appear as an arrow showing direction instead of a dot.");
         TrackerColor = config.Bind("Map Enemy Tracker Upgrade", "Color", trackerColor, "The color of the icon.");
         ExcludeEnemies = config.Bind("Map Enemy Tracker Upgrade", "Exclude Enemies", excludeEnemies, "Exclude specific enemies from displaying their icon by listing their names." +
-                                                                                             "\nExample: 'Gnome, Clown', seperated by commas.");
+                                                                                                     "\nExample: 'Gnome, Clown', seperated by commas.");
 
         this.assetBundle = assetBundle;
     }
 
     public override int Calculate(int value, PlayerAvatar player, int level) {
-        throw new System.NotImplementedException();
+        throw new NotImplementedException();
     }
 
     internal void AddEnemyToMap(Component component, string enemyName = null) {
-        if (UpgradeLevel == 0)
+        if (UpgradeRegister.GetLevel(SemiFunc.PlayerAvatarLocal()) == 0)
             return;
 
         if (component is EnemyParent enemyParent && enemyName == null)
@@ -57,7 +56,7 @@ public class MapEnemyTrackerUpgrade : UpgradeBase<int> {
     }
 
     internal void RemoveEnemyFromMap(Component component, string enemyName = null) {
-        if (UpgradeLevel == 0)
+        if (UpgradeRegister.GetLevel(SemiFunc.PlayerAvatarLocal()) == 0)
             return;
         if (component is EnemyParent enemyParent && enemyName == null)
             enemyName = enemyParent.enemyName;
@@ -71,12 +70,10 @@ public class MapEnemyTrackerUpgrade : UpgradeBase<int> {
             addToMap.RemoveAll(x => x.Item1 == visuals);
         removeFromMap.Add(visuals);
     }
-    
-    internal void UpdateTracker()
-    {
-        if (SemiFunc.PlayerAvatarLocal() != null && UpgradeLevel > 0) {
-            for (int i = addToMap.Count - 1; i >= 0; i--)
-            {
+
+    internal void UpdateTracker() {
+        if (SemiFunc.PlayerAvatarLocal() != null && UpgradeRegister.GetLevel(SemiFunc.PlayerAvatarLocal()) > 0) {
+            for (int i = addToMap.Count - 1; i >= 0; i--) {
                 (GameObject gameObject, Color color) = addToMap[i];
                 addToMap.RemoveAt(i);
                 MapCustom mapCustom = gameObject.GetComponent<MapCustom>();
@@ -84,11 +81,10 @@ public class MapEnemyTrackerUpgrade : UpgradeBase<int> {
                     continue;
                 mapCustom = gameObject.AddComponent<MapCustom>();
                 mapCustom.color = color;
-                mapCustom.sprite = ArrowIcon.Value ? assetBundle.LoadAsset<Sprite>("Map Tracker") :
-                                       SemiFunc.PlayerAvatarLocal().playerDeathHead.mapCustom.sprite;
+                mapCustom.sprite = ArrowIcon.Value ? assetBundle.LoadAsset<Sprite>("Map Tracker") : SemiFunc.PlayerAvatarLocal().playerDeathHead.mapCustom.sprite;
             }
-            for (int i = removeFromMap.Count - 1; i >= 0; i--)
-            {
+
+            for (int i = removeFromMap.Count - 1; i >= 0; i--) {
                 GameObject gameObject = removeFromMap[i];
                 removeFromMap.RemoveAt(i);
                 MapCustom mapCustom = gameObject.GetComponent<MapCustom>();
@@ -100,10 +96,10 @@ public class MapEnemyTrackerUpgrade : UpgradeBase<int> {
         }
     }
 
-    protected override void InitUpgrade(PlayerAvatar player, int level) {
+    internal override void InitUpgrade(PlayerAvatar player, int level) {
         base.InitUpgrade(player, level);
-        
-        if(enemyTrackerComponent != null) Object.Destroy(enemyTrackerComponent);
+
+        if (enemyTrackerComponent != null) Object.Destroy(enemyTrackerComponent);
         enemyTrackerComponent = new GameObject().AddComponent<EnemyTrackerComponent>();
     }
 }
@@ -114,7 +110,7 @@ internal class EnemyParentPatch {
     [HarmonyPostfix]
     static void SpawnRPC(EnemyParent __instance) {
         var mapEnemyTrackerUpgrade = SLRUpgradePack.MapEnemyTrackerUpgradeInstance;
-        if (mapEnemyTrackerUpgrade.UpgradeEnabled.Value == false || mapEnemyTrackerUpgrade.UpgradeLevel == 0)
+        if (mapEnemyTrackerUpgrade.UpgradeEnabled.Value == false || mapEnemyTrackerUpgrade.UpgradeRegister.GetLevel(SemiFunc.PlayerAvatarLocal()) == 0)
             return;
         mapEnemyTrackerUpgrade.AddEnemyToMap(__instance);
     }
@@ -123,7 +119,7 @@ internal class EnemyParentPatch {
     [HarmonyPostfix]
     static void DespawnRPC(EnemyParent __instance) {
         var mapEnemyTrackerUpgrade = SLRUpgradePack.MapEnemyTrackerUpgradeInstance;
-        if (mapEnemyTrackerUpgrade.UpgradeEnabled.Value == false || mapEnemyTrackerUpgrade.UpgradeLevel == 0)
+        if (mapEnemyTrackerUpgrade.UpgradeEnabled.Value == false || mapEnemyTrackerUpgrade.UpgradeRegister.GetLevel(SemiFunc.PlayerAvatarLocal()) == 0)
             return;
         mapEnemyTrackerUpgrade.RemoveEnemyFromMap(__instance);
     }
@@ -135,7 +131,7 @@ internal class EnemyHealthPatch {
     [HarmonyPostfix]
     static void DeathRPC(EnemyHealth __instance, Enemy ___enemy) {
         var mapEnemyTrackerUpgrade = SLRUpgradePack.MapEnemyTrackerUpgradeInstance;
-        if (mapEnemyTrackerUpgrade.UpgradeEnabled.Value == false || mapEnemyTrackerUpgrade.UpgradeLevel == 0)
+        if (mapEnemyTrackerUpgrade.UpgradeEnabled.Value == false || mapEnemyTrackerUpgrade.UpgradeRegister.GetLevel(SemiFunc.PlayerAvatarLocal()) == 0)
             return;
         mapEnemyTrackerUpgrade.RemoveEnemyFromMap((EnemyParent)AccessTools.Field(typeof(Enemy), "EnemyParent").GetValue(___enemy));
     }
@@ -148,7 +144,7 @@ internal class EnemySlowMouthPatch {
     static void UpdateStateRPC(EnemySlowMouth __instance, Enemy ___enemy) {
         var mapEnemyTrackerUpgrade = SLRUpgradePack.MapEnemyTrackerUpgradeInstance;
         var mapPlayerTrackerUpgrade = SLRUpgradePack.MapPlayerTrackerUpgradeInstance;
-        if (mapEnemyTrackerUpgrade.UpgradeEnabled.Value == false || mapEnemyTrackerUpgrade.UpgradeLevel == 0)
+        if (mapEnemyTrackerUpgrade.UpgradeEnabled.Value == false || mapEnemyTrackerUpgrade.UpgradeRegister.GetLevel(SemiFunc.PlayerAvatarLocal()) == 0)
             return;
         PlayerAvatar playerTarget = (PlayerAvatar)AccessTools.Field(typeof(EnemySlowMouth), "playerTarget").GetValue(__instance);
         EnemyParent enemyParent = (EnemyParent)AccessTools.Field(typeof(Enemy), "EnemyParent").GetValue(___enemy);
@@ -175,7 +171,7 @@ internal class PlayerAvatarEnemyPatch {
     [HarmonyPostfix]
     static void PlayerDeathRPC(PlayerAvatar __instance) {
         var mapEnemyTrackerUpgrade = SLRUpgradePack.MapEnemyTrackerUpgradeInstance;
-        if (mapEnemyTrackerUpgrade.UpgradeEnabled.Value == false || mapEnemyTrackerUpgrade.UpgradeLevel == 0)
+        if (mapEnemyTrackerUpgrade.UpgradeEnabled.Value == false || mapEnemyTrackerUpgrade.UpgradeRegister.GetLevel(SemiFunc.PlayerAvatarLocal()) == 0)
             return;
         mapEnemyTrackerUpgrade.RemoveEnemyFromMap(__instance);
     }

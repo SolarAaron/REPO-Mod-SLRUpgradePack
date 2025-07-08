@@ -1,26 +1,25 @@
-using System;
 using BepInEx.Configuration;
-using Photon.Realtime;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
 namespace SLRUpgradePack.UpgradeManagers.MoreUpgrades;
 
-public class SprintUsageComponent: MonoBehaviour {
+public class SprintUsageComponent : MonoBehaviour {
     private void FixedUpdate() {
         var sprintUsageUpgrade = SLRUpgradePack.SprintUsageUpgradeInstance;
-        if (PlayerController.instance != null && sprintUsageUpgrade.UpgradeLevel != 0 && sprintUsageUpgrade.originalEnergySprintDrain != null) {
-            PlayerController.instance.EnergySprintDrain = sprintUsageUpgrade.Calculate(sprintUsageUpgrade.originalEnergySprintDrain.Value, PlayerController.instance.playerAvatarScript, sprintUsageUpgrade.UpgradeLevel);
+        if (PlayerController.instance != null && sprintUsageUpgrade.UpgradeRegister.GetLevel(SemiFunc.PlayerAvatarLocal()) != 0 && sprintUsageUpgrade.originalEnergySprintDrain != null) {
+            PlayerController.instance.EnergySprintDrain = sprintUsageUpgrade.Calculate(sprintUsageUpgrade.originalEnergySprintDrain.Value, PlayerController.instance.playerAvatarScript,
+                                                                                       sprintUsageUpgrade.UpgradeRegister.GetLevel(SemiFunc.PlayerAvatarLocal()));
         }
     }
 
     private void OnDestroy() {
-        var sprintUsageUpgrade = SLRUpgradePack.SprintUsageUpgradeInstance;    
-        if(PlayerController.instance != null && sprintUsageUpgrade.originalEnergySprintDrain != null) PlayerController.instance.EnergySprintDrain = sprintUsageUpgrade.originalEnergySprintDrain.Value;
+        var sprintUsageUpgrade = SLRUpgradePack.SprintUsageUpgradeInstance;
+        if (PlayerController.instance != null && sprintUsageUpgrade.originalEnergySprintDrain != null) PlayerController.instance.EnergySprintDrain = sprintUsageUpgrade.originalEnergySprintDrain.Value;
     }
 }
 
-public class SprintUsageUpgrade: UpgradeBase<float> {
+public class SprintUsageUpgrade : UpgradeBase<float> {
     public ConfigEntry<float> ScalingFactor { get; set; }
     internal float? originalEnergySprintDrain;
     private SprintUsageComponent sprintUsageComponent;
@@ -34,11 +33,11 @@ public class SprintUsageUpgrade: UpgradeBase<float> {
         return value / (1f + level * ScalingFactor.Value);
     }
 
-    protected override void InitUpgrade(PlayerAvatar player, int level) {
+    internal override void InitUpgrade(PlayerAvatar player, int level) {
         base.InitUpgrade(player, level);
         if (PlayerController.instance != null)
             originalEnergySprintDrain = PlayerController.instance.EnergySprintDrain;
-        if(sprintUsageComponent != null) Object.Destroy(sprintUsageComponent);
+        if (sprintUsageComponent != null) Object.Destroy(sprintUsageComponent);
         sprintUsageComponent = new GameObject("Sprint Usage Component").AddComponent<SprintUsageComponent>();
     }
 }

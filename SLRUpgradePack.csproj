@@ -37,6 +37,7 @@
   <ItemGroup>
     <Reference Include="CustomColors">
       <HintPath>..\..\.config\r2modmanPlus-local\REPO\profiles\Test\BepInEx\plugins\x753_REPO-CustomColors\CustomColors.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="PhotonRealtime">
       <HintPath>..\..\.steam\steam\steamapps\common\REPO\REPO_Data\Managed\PhotonRealtime.dll</HintPath>

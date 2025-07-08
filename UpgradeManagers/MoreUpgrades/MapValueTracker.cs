@@ -16,7 +16,7 @@ public class MapValueTrackerComponent : MonoBehaviour {
         if (SemiFunc.RunIsLobby() || SemiFunc.RunIsShop())
             return;
         var mapValueTrackerUpgrade = SLRUpgradePack.MapValueTrackerUpgradeInstance;
-        if (MissionUI.instance != null && mapValueTrackerUpgrade.UpgradeLevel != 0) {
+        if (MissionUI.instance != null && mapValueTrackerUpgrade.UpgradeRegister.GetLevel(SemiFunc.PlayerAvatarLocal()) != 0) {
             var dollarValueCurrentRef = FieldRefAccess<ValuableObject, float>("dollarValueCurrent");
             TextMeshProUGUI Text = (TextMeshProUGUI)Field(typeof(MissionUI), "Text").GetValue(MissionUI.instance);
             string messagePrev = (string)Field(typeof(MissionUI), "messagePrev").GetValue(MissionUI.instance);
@@ -59,12 +59,12 @@ public class MapValueTrackerUpgrade : UpgradeBase<int> {
     }
 
     public override int Calculate(int value, PlayerAvatar player, int level) {
-        throw new System.NotImplementedException();
+        throw new NotImplementedException();
     }
 
-    protected override void InitUpgrade(PlayerAvatar player, int level) {
+    internal override void InitUpgrade(PlayerAvatar player, int level) {
         base.InitUpgrade(player, level);
-        if(currentValuables == null)
+        if (currentValuables == null)
             currentValuables = new List<ValuableObject>();
         changed = false;
         previousCount = 0;
@@ -77,14 +77,13 @@ public class MapValueTrackerUpgrade : UpgradeBase<int> {
 }
 
 [HarmonyPatch(typeof(MissionUI), "MissionText")]
-internal class MissionUIPatch
-{
+internal class MissionUIPatch {
     internal static void Prefix(MissionUI __instance, out string __state) {
-        if(__instance != null)
+        if (__instance != null)
             __state = Field(typeof(MissionUI), "messagePrev").GetValue(__instance) as string;
         else __state = null;
     }
-    
+
     internal static void Postfix(MissionUI __instance, string __state) {
         string messagePrev = __instance == null ? null : (string)Field(typeof(MissionUI), "messagePrev").GetValue(__instance);
         if (__state != messagePrev) {
@@ -94,14 +93,12 @@ internal class MissionUIPatch
 }
 
 [HarmonyPatch(typeof(ValuableObject))]
-internal class ValuableObjectTrackerPatch
-{   
+internal class ValuableObjectTrackerPatch {
     [HarmonyPatch("Start")]
     [HarmonyPostfix]
-    static void Start(ValuableObject __instance)
-    {
+    static void Start(ValuableObject __instance) {
         var mapValueTrackerUpgrade = SLRUpgradePack.MapValueTrackerUpgradeInstance;
-        if (mapValueTrackerUpgrade.UpgradeLevel == 0)
+        if (mapValueTrackerUpgrade.UpgradeRegister.GetLevel(SemiFunc.PlayerAvatarLocal()) == 0)
             return;
         SLRUpgradePack.Logger.LogInfo($"Start tracking {__instance.name}");
         if (!mapValueTrackerUpgrade.currentValuables.Contains(__instance))
@@ -109,16 +106,13 @@ internal class ValuableObjectTrackerPatch
     }
 }
 
-
 [HarmonyPatch(typeof(PhysGrabObject))]
-internal class PhysGrabObjectTrackerPatch
-{   
+internal class PhysGrabObjectTrackerPatch {
     [HarmonyPatch("OnDestroy")]
     [HarmonyPostfix]
-    static void OnDestroy(PhysGrabObject __instance)
-    {
+    static void OnDestroy(PhysGrabObject __instance) {
         var mapValueTrackerUpgrade = SLRUpgradePack.MapValueTrackerUpgradeInstance;
-        if (mapValueTrackerUpgrade.UpgradeLevel == 0)
+        if (mapValueTrackerUpgrade.UpgradeRegister.GetLevel(SemiFunc.PlayerAvatarLocal()) == 0)
             return;
         ValuableObject valuableObject = __instance.gameObject.GetComponent<ValuableObject>();
         if (mapValueTrackerUpgrade.currentValuables.Contains(valuableObject))
