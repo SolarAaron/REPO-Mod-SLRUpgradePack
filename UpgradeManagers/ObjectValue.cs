@@ -4,6 +4,7 @@ using System.Linq;
 using BepInEx.Configuration;
 using HarmonyLib;
 using UnityEngine;
+using UnityEngine.UIElements;
 using static HarmonyLib.AccessTools;
 using Object = UnityEngine.Object;
 
@@ -48,6 +49,8 @@ public class ValuableObjectValuePatch {
         var objectValueUpgrade = SLRUpgradePack.ObjectValueUpgradeInstance;
 
         if (SemiFunc.IsMasterClientOrSingleplayer() && objectValueUpgrade.UpgradeEnabled.Value) {
+            if (!objectValueUpgrade.UpgradeScalesSurplus.Value && instance.name.StartsWithIgnoreCaseFast("surplus")) return;
+
             SLRUpgradePack.Logger.LogDebug($"{instance.name} Original value: {instance.valuePreset.valueMin} - {instance.valuePreset.valueMax} ({DollarValueCurrentRef.Invoke(instance)} / {FixedValueRef.Invoke(instance)})");
             var customValue = Object.Instantiate(instance.valuePreset);
             var finalValue = DollarValueCurrentRef.Invoke(instance);

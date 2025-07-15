@@ -26,7 +26,7 @@ public class MapPlayerTrackerUpgrade : UpgradeBase<int> {
     private PlayerTrackerComponent playerTrackerComponent;
 
     public MapPlayerTrackerUpgrade(bool enabled, ConfigFile config, AssetBundle assetBundle, float priceMultiplier, bool arrowIcon, Color trackerColor, int minPrice, int maxPrice, bool playerColor) :
-        base("Map Player Tracker", "Map Player Tracker", enabled, 1, false, 1, config, assetBundle, priceMultiplier, false, minPrice, maxPrice, true, true) {
+        base("Map Player Tracker", "assets/repo/mods/resources/items/items/item upgrade map player tracker.asset", enabled, 1, false, 1, config, assetBundle, priceMultiplier, false, minPrice, maxPrice, true, true) {
         ArrowIcon = config.Bind("Map Player Tracker Upgrade", "Arrow Icon", arrowIcon, "Whether the icon should appear as an arrow showing direction instead of a dot.");
         PlayerColor = config.Bind("Map Player Tracker Upgrade", "Player Color", playerColor, "Whether the icon should be colored as the player.");
         TrackerColor = config.Bind("Map Player Tracker Upgrade", "Color", trackerColor, "The color of the icon.");
@@ -73,7 +73,7 @@ public class MapPlayerTrackerUpgrade : UpgradeBase<int> {
                     continue;
                 mapCustom = gameObject.AddComponent<MapCustom>();
                 mapCustom.color = color;
-                mapCustom.sprite = ArrowIcon.Value ? assetBundle.LoadAsset<Sprite>("Map Tracker") : SemiFunc.PlayerAvatarLocal().playerDeathHead.mapCustom.sprite;
+                mapCustom.sprite = ArrowIcon.Value ? IntegrationResource.moreBundle.LoadAsset<Sprite>("Map Tracker") : SemiFunc.PlayerAvatarLocal().playerDeathHead.mapCustom.sprite;
             }
 
             for (int i = removeFromMap.Count - 1; i >= 0; i--) {

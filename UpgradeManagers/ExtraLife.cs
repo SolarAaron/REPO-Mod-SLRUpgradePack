@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using BepInEx.Configuration;
 using Photon.Pun;
 using UnityEngine;
@@ -8,6 +9,7 @@ namespace SLRUpgradePack.UpgradeManagers;
 
 public class ExtraLifeUpgrade : UpgradeBase<float> {
     public ConfigEntry<int> RevivePercent { get; protected set; }
+    internal Dictionary<string, ExtraLife> ExtraLives { get; set; } = new();
 
     public ExtraLifeUpgrade(bool enabled, float upgradeAmount, bool exponential, float exponentialAmount,
                             ConfigFile config, AssetBundle assetBundle, int revivePercent, float priceMultiplier) :
@@ -20,34 +22,34 @@ public class ExtraLifeUpgrade : UpgradeBase<float> {
 
     internal override void InitUpgrade(PlayerAvatar player, int level) {
         base.InitUpgrade(player, level);
-        if (!UpgradeEnabled.Value || UpgradeRegister.GetLevel(player) == 0) return;
 
-        if (!player.TryGetComponent<ExtraLife>(out var extraLife)) {
-            extraLife = player.gameObject.AddComponent<ExtraLife>();
-            extraLife.player = player;
-            extraLife.playerHead = player.playerDeathHead;
-        }
+        if (ExtraLives.TryGetValue(SemiFunc.PlayerGetSteamID(player), out var extraLife)) Object.Destroy(extraLife);
+
+        extraLife = new GameObject($"Extra Life: {SemiFunc.PlayerGetName(player)}").AddComponent<ExtraLife>();
+        extraLife.player = player;
+        extraLife.playerHead = player.playerDeathHead;
+        ExtraLives[SemiFunc.PlayerGetSteamID(player)] = extraLife;
     }
 }
 
 public class ExtraLife : MonoBehaviour {
     public PlayerDeathHead playerHead { get; set; }
     public PlayerAvatar player { get; set; }
-    public bool Pause { get; set; }
     private bool _isMoving;
     private Coroutine? reviving;
     private PhotonView photonView;
+    private FieldRef<PlayerHealth, int> _healthRef = FieldRefAccess<PlayerHealth, int>("health");
+    private FieldRef<PlayerDeathHead, bool> _inExtractionPointRef = FieldRefAccess<PlayerDeathHead, bool>("inExtractionPoint");
 
     private void Update() {
         if (!SemiFunc.IsMasterClientOrSingleplayer()) return; // host handles all calculation
 
-        var healthRef = FieldRefAccess<PlayerHealth, int>("health");
         if (player.playerHealth) {
             var extraLifeUpgrade = SLRUpgradePack.ExtraLifeUpgradeInstance;
 
             if (!extraLifeUpgrade.UpgradeEnabled.Value) return;
 
-            if (healthRef.Invoke(player.playerHealth) == 0 && extraLifeUpgrade.UpgradeRegister.GetLevel(player) > 0 && !_isMoving && reviving == null) {
+            if (_healthRef.Invoke(player.playerHealth) == 0 && extraLifeUpgrade.UpgradeRegister.GetLevel(player) > 0 && !_isMoving && !_inExtractionPointRef.Invoke(playerHead) && reviving == null) {
                 reviving = StartCoroutine(BeginReviving());
             }
         } else {
@@ -68,6 +70,11 @@ public class ExtraLife : MonoBehaviour {
             SLRUpgradePack.Logger.LogInfo("Pause attempt to revive moving head");
         }
 
+        if (_inExtractionPointRef.Invoke(playerHead)) {
+            reviving = null;
+            yield break;
+        }
+
         player.Revive();
         player.playerHealth.HealOther(Mathf.FloorToInt(maxHealthRef.Invoke(player.playerHealth) * extraLifeUpgrade.RevivePercent.Value / 100f), true);
 
@@ -85,12 +92,13 @@ public class ExtraLife : MonoBehaviour {
 
     private void Start() {
         SLRUpgradePack.Logger.LogInfo($"{SemiFunc.PlayerGetName(player)} has obtained extra lives");
-        Pause = false;
-        photonView = GetComponent<PhotonView>();
+        photonView = gameObject.AddComponent<PhotonView>();
         StartCoroutine(MovementCheck());
     }
 
     private IEnumerator MovementCheck() {
+        while (!playerHead) yield return null;
+        while (!playerHead.transform) yield return null;
         Vector3 currentPosition = playerHead.transform.position;
         while (true) {
             yield return new WaitForSecondsRealtime(0.5f);
@@ -99,15 +107,5 @@ public class ExtraLife : MonoBehaviour {
             SLRUpgradePack.Logger.LogDebug($"{SemiFunc.PlayerGetName(player)} is moving: {_isMoving}");
             currentPosition = nextPosition;
         }
-    }
-
-    public void PauseLogic(bool pause) {
-        if (!SemiFunc.IsMultiplayer()) PauseLogicRPC(pause);
-        else photonView.RPC("PauseLogicRPC", RpcTarget.All, pause);
-    }
-
-    [PunRPC]
-    private void PauseLogicRPC(bool pause) {
-        Pause = pause;
     }
 }

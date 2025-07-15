@@ -17,18 +17,16 @@ public abstract class UpgradeBase<T> {
     public ConfigEntry<bool> UpgradeExponential { get; protected set; }
     public ConfigEntry<T> UpgradeExpAmount { get; protected set; }
     public ConfigEntry<float> PriceMultiplier { get; protected set; }
-    public ConfigEntry<int> MinPrice { get; protected set; }
-    public ConfigEntry<int> MaxPrice { get; protected set; }
-    public bool IsIntegration { get; private set; }
+    public ConfigEntry<int> StartingAmount { get; protected set; }
     public PlayerUpgrade UpgradeRegister { get; protected set; }
 
     protected UpgradeBase(string name, string assetName, bool enabled, T upgradeAmount, bool exponential, T exponentialAmount, ConfigFile config, AssetBundle assetBundle, float priceMultiplier, bool configureAmount, int minPrice,
                           int maxPrice, bool canBeExponential, bool singleUse) {
-        IsIntegration = false;
-
         UpgradeEnabled = config.Bind($"{name} Upgrade", "Enabled", enabled,
                                      $"Should the {name} Upgrade be enabled?");
         PriceMultiplier = config.Bind($"{name} Upgrade", "Price multiplier", priceMultiplier, "Multiplier of upgrade base price");
+        StartingAmount = config.Bind($"{name} Upgrade", "Starting Amount", 0, $"How many levels of {name} to start a game with");
+
         if (configureAmount) {
             UpgradeAmount = config.Bind($"{name} Upgrade", $"{name} Upgrade Power", upgradeAmount,
                                         $"How much the {name} Upgrade increments");
@@ -42,33 +40,6 @@ public abstract class UpgradeBase<T> {
 
         if (UpgradeEnabled.Value) {
             Item upgradeItem = assetBundle.LoadAsset<Item>(assetName);
-
-            if (upgradeItem.value == null) { // it's probably a moreupgrades integration
-                upgradeItem.value = ScriptableObject.CreateInstance<Value>();
-
-                MinPrice = config.Bind($"{name} Upgrade", "Base Value Minimum", minPrice, "Minimum value to use for price calculation");
-                MaxPrice = config.Bind($"{name} Upgrade", "Base Value Maximum", maxPrice, "Maximum value to use for price calculation");
-
-                upgradeItem.value.valueMin = MinPrice.Value;
-                upgradeItem.value.valueMax = MaxPrice.Value;
-                upgradeItem.maxAmountInShop = !singleUse ? 2 : 1;
-                upgradeItem.maxAmount = !singleUse ? 10 : 1;
-                upgradeItem.maxPurchaseAmount = !singleUse ? 0 : 1;
-                upgradeItem.maxPurchase = singleUse;
-            }
-
-            if (upgradeItem.prefab == null) { // it's a moreupgrades integration
-                upgradeItem.prefab = assetBundle.LoadAsset<GameObject>($"{assetName} Prefab");
-                upgradeItem.prefab.GetComponent<ItemAttributes>().item = upgradeItem;
-                upgradeItem.itemAssetName = upgradeItem.name = upgradeItem.prefab.name = $"Item Upgrade {name}";
-                upgradeItem.itemName = name;
-            }
-
-            if (!upgradeItem.prefab.TryGetComponent<REPOLibItemUpgrade>(out var libItemUpgrade)) { // it's a moreupgrades integration
-                libItemUpgrade = upgradeItem.prefab.AddComponent<REPOLibItemUpgrade>();
-                FieldRefAccess<REPOLibItemUpgrade, string>("_upgradeId").Invoke(libItemUpgrade) = name.Replace(" ", "");
-                IsIntegration = true;
-            }
 
             SLRUpgradePack.Logger.LogInfo($"Upgrade price range (default) {upgradeItem.value.valueMin} - {upgradeItem.value.valueMax}");
             var newVal = ScriptableObject.CreateInstance<Value>();

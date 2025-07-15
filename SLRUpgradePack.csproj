@@ -19,6 +19,9 @@
     <EnableGameReferences>true</EnableGameReferences>
     <DefaultItemExcludes>$(DefaultItemExcludes);Assets/**</DefaultItemExcludes>
   </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
 
   <!-- Package References -->
   <ItemGroup>

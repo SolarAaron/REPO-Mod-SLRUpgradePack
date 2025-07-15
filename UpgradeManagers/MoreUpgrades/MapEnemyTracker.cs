@@ -18,14 +18,14 @@ public class MapEnemyTrackerUpgrade : UpgradeBase<int> {
     public ConfigEntry<bool> ArrowIcon { get; set; }
     public ConfigEntry<Color> TrackerColor { get; set; }
     public ConfigEntry<string> ExcludeEnemies { get; set; }
-    private List<(GameObject, Color)> addToMap = [];
+    private List<(GameObject, Color, float)> addToMap = [];
     private List<GameObject> removeFromMap = [];
     private AssetBundle assetBundle;
     private EnemyTrackerComponent enemyTrackerComponent;
 
     public MapEnemyTrackerUpgrade(bool enabled, ConfigFile config, AssetBundle assetBundle, float priceMultiplier, bool arrowIcon, Color trackerColor,
                                   string excludeEnemies, int minPrice, int maxPrice) :
-        base("Map Enemy Tracker", "Map Enemy Tracker", enabled, 1, false, 1, config, assetBundle, priceMultiplier, false, minPrice, maxPrice, false, true) {
+        base("Map Enemy Tracker", "assets/repo/mods/resources/items/items/item upgrade map enemy tracker.asset", enabled, 1, false, 1, config, assetBundle, priceMultiplier, false, minPrice, maxPrice, false, true) {
         ArrowIcon = config.Bind("Map Enemy Tracker Upgrade", "Arrow Icon", arrowIcon, "Whether the icon should appear as an arrow showing direction instead of a dot.");
         TrackerColor = config.Bind("Map Enemy Tracker Upgrade", "Color", trackerColor, "The color of the icon.");
         ExcludeEnemies = config.Bind("Map Enemy Tracker Upgrade", "Exclude Enemies", excludeEnemies, "Exclude specific enemies from displaying their icon by listing their names." +
@@ -52,7 +52,7 @@ public class MapEnemyTrackerUpgrade : UpgradeBase<int> {
             return;
         if (removeFromMap.Contains(visuals))
             removeFromMap.Remove(visuals);
-        addToMap.Add((visuals, TrackerColor.Value));
+        addToMap.Add((visuals, TrackerColor.Value, enemyName == "Animal" ? 180 : 0));
     }
 
     internal void RemoveEnemyFromMap(Component component, string enemyName = null) {
@@ -74,14 +74,15 @@ public class MapEnemyTrackerUpgrade : UpgradeBase<int> {
     internal void UpdateTracker() {
         if (SemiFunc.PlayerAvatarLocal() != null && UpgradeRegister.GetLevel(SemiFunc.PlayerAvatarLocal()) > 0) {
             for (int i = addToMap.Count - 1; i >= 0; i--) {
-                (GameObject gameObject, Color color) = addToMap[i];
+                (GameObject gameObject, Color color, float flipAngle) = addToMap[i];
                 addToMap.RemoveAt(i);
                 MapCustom mapCustom = gameObject.GetComponent<MapCustom>();
                 if (mapCustom != null)
                     continue;
                 mapCustom = gameObject.AddComponent<MapCustom>();
                 mapCustom.color = color;
-                mapCustom.sprite = ArrowIcon.Value ? assetBundle.LoadAsset<Sprite>("Map Tracker") : SemiFunc.PlayerAvatarLocal().playerDeathHead.mapCustom.sprite;
+                mapCustom.sprite = ArrowIcon.Value ? IntegrationResource.moreBundle.LoadAsset<Sprite>("Map Tracker") : SemiFunc.PlayerAvatarLocal().playerDeathHead.mapCustom.sprite;
+                mapCustom.transform.RotateAround(mapCustom.transform.position, Vector3.up, flipAngle);
             }
 
             for (int i = removeFromMap.Count - 1; i >= 0; i--) {

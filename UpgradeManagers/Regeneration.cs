@@ -8,16 +8,16 @@ namespace SLRUpgradePack.UpgradeManagers;
 public class RegenerationComponent : MonoBehaviour {
     internal PlayerAvatar player;
     private float pendingHealing = 0;
+    private FieldRef<PlayerHealth, int>? _healthRef = FieldRefAccess<PlayerHealth, int>("health");
 
     private void Update() {
         if (!SemiFunc.IsMasterClientOrSingleplayer()) return; // host handles all calculation
 
-        var healthRef = FieldRefAccess<PlayerHealth, int>("health");
         var regenerationUpgrade = SLRUpgradePack.RegenerationUpgradeInstance;
 
         if (!ValuableDirector.instance.setupComplete) return;
 
-        if (!regenerationUpgrade.UpgradeEnabled.Value || regenerationUpgrade.UpgradeRegister.GetLevel(player) == 0 || healthRef.Invoke(player.playerHealth) == 0) return;
+        if (!regenerationUpgrade.UpgradeEnabled.Value || regenerationUpgrade.UpgradeRegister.GetLevel(player) == 0 || _healthRef.Invoke(player.playerHealth) == 0) return;
 
         pendingHealing +=
             regenerationUpgrade.Calculate(regenerationUpgrade.BaseHealing.Value * Time.deltaTime, player,

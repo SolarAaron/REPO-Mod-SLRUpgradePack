@@ -12,17 +12,18 @@ using Object = UnityEngine.Object;
 namespace SLRUpgradePack.UpgradeManagers.MoreUpgrades;
 
 public class MapValueTrackerComponent : MonoBehaviour {
+    private FieldRef<ValuableObject, float>? _dollarValueCurrentRef = FieldRefAccess<ValuableObject, float>("dollarValueCurrent");
+
     private void Update() {
         if (SemiFunc.RunIsLobby() || SemiFunc.RunIsShop())
             return;
         var mapValueTrackerUpgrade = SLRUpgradePack.MapValueTrackerUpgradeInstance;
         if (MissionUI.instance != null && mapValueTrackerUpgrade.UpgradeRegister.GetLevel(SemiFunc.PlayerAvatarLocal()) != 0) {
-            var dollarValueCurrentRef = FieldRefAccess<ValuableObject, float>("dollarValueCurrent");
             TextMeshProUGUI Text = (TextMeshProUGUI)Field(typeof(MissionUI), "Text").GetValue(MissionUI.instance);
             string messagePrev = (string)Field(typeof(MissionUI), "messagePrev").GetValue(MissionUI.instance);
             int count = mapValueTrackerUpgrade.currentValuables.Count;
             bool displayTotalValue = mapValueTrackerUpgrade.DisplayTotalValue.Value;
-            int value = displayTotalValue ? mapValueTrackerUpgrade.currentValuables.Select(x => (int)dollarValueCurrentRef.Invoke(x)).Sum() : 0;
+            int value = displayTotalValue ? mapValueTrackerUpgrade.currentValuables.Select(x => (int)_dollarValueCurrentRef.Invoke(x)).Sum() : 0;
             if (!Text.text.IsNullOrWhiteSpace() && (mapValueTrackerUpgrade.changed || mapValueTrackerUpgrade.previousCount != count || mapValueTrackerUpgrade.previousValue != value)) {
                 SLRUpgradePack.Logger.LogInfo("Calculating map value");
                 string text = Text.text;
@@ -46,7 +47,7 @@ public class MapValueTrackerComponent : MonoBehaviour {
 
 public class MapValueTrackerUpgrade : UpgradeBase<int> {
     public ConfigEntry<bool> DisplayTotalValue { get; set; }
-    internal List<ValuableObject> currentValuables;
+    internal List<ValuableObject> currentValuables = new();
     internal bool changed;
     internal int previousCount;
     internal int previousValue;
@@ -54,7 +55,7 @@ public class MapValueTrackerUpgrade : UpgradeBase<int> {
     private MapValueTrackerComponent mapValueTrackerComponent;
 
     public MapValueTrackerUpgrade(bool enabled, ConfigFile config, AssetBundle assetBundle, float priceMultiplier, int minPrice, int maxPrice, bool displayTotal) :
-        base("Map Value Tracker", "Valuable Count", enabled, 1, false, 1, config, assetBundle, priceMultiplier, false, minPrice, maxPrice, false, true) {
+        base("Map Value Tracker", "assets/repo/mods/resources/items/items/item upgrade map value tracker.asset", enabled, 1, false, 1, config, assetBundle, priceMultiplier, false, minPrice, maxPrice, false, true) {
         DisplayTotalValue = config.Bind("Map Value Tracker Upgrade", "Display Total Value", displayTotal, "Whether to display the total value next to the valuable counter.");
     }
 
@@ -64,8 +65,6 @@ public class MapValueTrackerUpgrade : UpgradeBase<int> {
 
     internal override void InitUpgrade(PlayerAvatar player, int level) {
         base.InitUpgrade(player, level);
-        if (currentValuables == null)
-            currentValuables = new List<ValuableObject>();
         changed = false;
         previousCount = 0;
         previousValue = 0;
@@ -96,6 +95,7 @@ internal class MissionUIPatch {
 internal class ValuableObjectTrackerPatch {
     [HarmonyPatch("Start")]
     [HarmonyPostfix]
+    [HarmonyWrapSafe]
     static void Start(ValuableObject __instance) {
         var mapValueTrackerUpgrade = SLRUpgradePack.MapValueTrackerUpgradeInstance;
         if (mapValueTrackerUpgrade.UpgradeRegister.GetLevel(SemiFunc.PlayerAvatarLocal()) == 0)
@@ -110,6 +110,7 @@ internal class ValuableObjectTrackerPatch {
 internal class PhysGrabObjectTrackerPatch {
     [HarmonyPatch("OnDestroy")]
     [HarmonyPostfix]
+    [HarmonyWrapSafe]
     static void OnDestroy(PhysGrabObject __instance) {
         var mapValueTrackerUpgrade = SLRUpgradePack.MapValueTrackerUpgradeInstance;
         if (mapValueTrackerUpgrade.UpgradeRegister.GetLevel(SemiFunc.PlayerAvatarLocal()) == 0)

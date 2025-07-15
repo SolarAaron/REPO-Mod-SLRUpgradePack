@@ -9,7 +9,7 @@ inkscape -w 512 -h 512 ../Assets/REPO/Mods/upgrade_regeneration.svg -o ../Assets
 inkscape -w 512 -h 512 ../Assets/REPO/Mods/upgrade_extra_life.svg -o ../Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Extra_Life_Albedo.png
 
 #dll
-cp ${BEP_PREFIX}/Test/BepInEx/plugins/SolarAaron-SLRUpgradePack/SLRUpgradePack.dll skel/plugins
+cp ../bin/Release/netstandard2.1/SLRUpgradePack.dll skel/plugins
 
 #remove previous package
 if [ -f SLRUpgradePack.zip ] ; then

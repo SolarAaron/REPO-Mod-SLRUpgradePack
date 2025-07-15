@@ -1,3 +1,13 @@
+# v0.1.5
+
+## New textures for Map Player Tracker, Map Enemy Tracker and Map Value Tracker thanks to @Kizzycocoa
+
+* Beta texture for Extra Life also thanks to @Kizzycocoa
+* Fixes for Extra Life and Heart Of Gold in multiplayer scenarios
+* Fixes for Map Value Tracker only counting newly spawned items
+* Adds option to start with a certain level of each upgrade
+* Fixes Object Value scaling surplus bags even when option is disabled
+
 # v0.1.4
 Fix logging when player disconnects from lobby
 

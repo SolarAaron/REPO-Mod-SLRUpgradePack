@@ -25,7 +25,7 @@ public class SprintUsageUpgrade : UpgradeBase<float> {
     private SprintUsageComponent sprintUsageComponent;
 
     public SprintUsageUpgrade(bool enabled, ConfigFile config, AssetBundle assetBundle, float priceMultiplier, int minPrice, int maxPrice) :
-        base("Sprint Usage", "Sprint Usage", enabled, 0.1f, false, 1.1f, config, assetBundle, priceMultiplier, false, minPrice, maxPrice, false, false) {
+        base("Sprint Usage", "assets/repo/mods/resources/items/items/item upgrade sprint usage.asset", enabled, 0.1f, false, 1.1f, config, assetBundle, priceMultiplier, false, minPrice, maxPrice, false, false) {
         ScalingFactor = config.Bind("Sprint Usage Upgrade", "Scaling Factor", 0.1f, "Formula: energySprintDrain / (1 + (upgradeAmount * scalingFactor))");
     }
 
