@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 2846533316
+CRC: 4159003803
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 04c513d34e1f7bc7215032392685239c
+    Hash: 5cf38ca733a0dd58075b903af9eeac27
   TypeTreeHash:
     serializedVersion: 2
     Hash: 71e866d9f044ba1c3a49e554c5d53806
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 04c513d34e1f7bc7215032392685239c
+    Hash: 5cf38ca733a0dd58075b903af9eeac27
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -122,21 +122,25 @@ SerializeReferenceClassIdentifiers:
 Assets:
 - Assets/REPO/Mods/Resources/items/Item Upgrade Map Enemy Tracker.prefab
 - Assets/REPO/Mods/Materials/upgrade_heart_of_gold.mat
+- Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Extra_Life_New_Albedo.png
 - Assets/REPO/Mods/Materials/upgrade_regeneration.mat
 - Assets/REPO/Mods/Materials/upgrade_durability.mat
 - Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Map_Value_Tracker_New_Albedo.png
+- Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Value_New_Albedo.png
 - Assets/REPO/Mods/Resources/items/Item Upgrade Heart Of Gold.prefab
 - Assets/REPO/Mods/Resources/items/items/Item Upgrade Armor Lib.asset
 - Assets/REPO/Mods/Resources/items/items/Item Upgrade Durability.asset
-- Assets/REPO/Mods/Materials/upgrade_map_enemy_tracker.mat
+- Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Regeneration_New_Albedo.png
 - Assets/REPO/Mods/Resources/items/items/Item Upgrade Valuable Density Lib.asset
+- Assets/REPO/Mods/Materials/upgrade_map_enemy_tracker.mat
 - Assets/REPO/Mods/Materials/upgrade_valuable.mat
 - Assets/REPO/Mods/Resources/items/items/Item Upgrade Sprint Usage Lib.asset
 - Assets/REPO/Mods/Resources/items/Item Upgrade Value.prefab
 - Assets/REPO/Mods/Resources/items/items/Item Upgrade Map Value Tracker Lib.asset
 - Assets/REPO/Mods/Materials/upgrade_sprint_usage.mat
+- Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Armor_New_Albedo.png
 - Assets/REPO/Mods/Resources/items/items/Item Upgrade Map Enemy Tracker Lib.asset
-- Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Overcharge_Albedo.png
+- Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Overcharge_New_Albedo.png
 - Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Extra_Life_Albedo.png
 - Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Extra_Life_Beta_Albedo.png
 - Assets/REPO/Mods/Materials/upgrade_overcharge.mat
@@ -145,6 +149,7 @@ Assets:
 - Assets/REPO/Mods/Textures/Texture2Ds/Map Tracker.png
 - Assets/REPO/Mods/Materials/upgrade_map_value_tracker.mat
 - Assets/REPO/Mods/Resources/items/items/Item Upgrade Regeneration.asset
+- Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Overcharge_Albedo.png
 - Assets/REPO/Mods/Resources/items/items/Item Upgrade Map Value Tracker.asset
 - Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Sprint_Usage_Albedo.png
 - Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Map_Player_Tracker_New_Albedo.png
@@ -169,11 +174,12 @@ Assets:
 - Assets/REPO/Mods/Materials/placeholder.mat
 - Assets/REPO/Mods/Resources/items/items/Item Upgrade Map Player Tracker Lib.asset
 - Assets/REPO/Mods/Resources/items/placeholder.prefab
-- Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Value_Albedo.png
 - Assets/REPO/Mods/Resources/items/Item Upgrade Map Player Tracker.prefab
 - Assets/REPO/Mods/Resources/items/items/Item Upgrade Valuable Density.asset
+- Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Value_Albedo.png
 - Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Regeneration_Albedo.png
 - Assets/REPO/Mods/Materials/upgrade_map_player_tracker.mat
+- Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Heart_Of_Gold_New_Albedo.png
 - Assets/REPO/Mods/Materials/upgrade_extra_life.mat
 - Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Heart_Of_Gold_Albedo.png
 - Assets/REPO/Mods/Resources/items/items/Item Upgrade Value.asset
@@ -182,6 +188,9 @@ Assets:
 - Assets/REPO/Mods/Resources/items/items/Item Upgrade Sprint Usage.asset
 - Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Armor_Albedo.png
 - Assets/REPO/Mods/Resources/items/items/Item Upgrade Extra Life.asset
+- Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Valuable_New_Albedo.png
+- Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Sprint_Usage_New_Albedo.png
 - Assets/REPO/Mods/Resources/items/items/Item Upgrade Overcharge.asset
+- Assets/REPO/Mods/Textures/Texture2Ds/Upgrade_Durability_New_Albedo.png
 - Assets/REPO/Mods/Resources/items/items/Item Upgrade Heart Of Gold Lib.asset
 Dependencies: []

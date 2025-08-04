@@ -1,14 +1,16 @@
 using System;
+using System.Collections.Generic;
 using BepInEx.Configuration;
 using UnityEngine;
 using static HarmonyLib.AccessTools;
+using Object = UnityEngine.Object;
 
 namespace SLRUpgradePack.UpgradeManagers;
 
 public class RegenerationComponent : MonoBehaviour {
     internal PlayerAvatar player;
     private float pendingHealing = 0;
-    private FieldRef<PlayerHealth, int>? _healthRef = FieldRefAccess<PlayerHealth, int>("health");
+    private readonly FieldRef<PlayerHealth, int> _healthRef = FieldRefAccess<PlayerHealth, int>("health");
 
     private void Update() {
         if (!SemiFunc.IsMasterClientOrSingleplayer()) return; // host handles all calculation
@@ -32,6 +34,7 @@ public class RegenerationComponent : MonoBehaviour {
 
 public class RegenerationUpgrade : UpgradeBase<float> {
     public ConfigEntry<float> BaseHealing { get; protected set; }
+    internal Dictionary<string, RegenerationComponent> Regenerations { get; set; } = new();
 
     public RegenerationUpgrade(bool enabled, float upgradeAmount, bool exponential, float exponentialAmount,
                                ConfigFile config, AssetBundle assetBundle, float baseHealing, float priceMultiplier) : base("Regeneration", "assets/repo/mods/resources/items/items/item upgrade regeneration.asset", enabled, upgradeAmount,
@@ -43,9 +46,10 @@ public class RegenerationUpgrade : UpgradeBase<float> {
 
     internal override void InitUpgrade(PlayerAvatar player, int level) {
         base.InitUpgrade(player, level);
-        if (!player.TryGetComponent<RegenerationComponent>(out var regenerationComponent)) {
-            regenerationComponent = player.gameObject.AddComponent<RegenerationComponent>();
-            regenerationComponent.player = player;
-        }
+        if (Regenerations.TryGetValue(SemiFunc.PlayerGetSteamID(player), out var regenerationComponent)) Object.Destroy(regenerationComponent);
+
+        regenerationComponent = new GameObject($"Regeneration: {SemiFunc.PlayerGetName(player)}").gameObject.AddComponent<RegenerationComponent>();
+        regenerationComponent.player = player;
+        Regenerations[SemiFunc.PlayerGetSteamID(player)] = regenerationComponent;
     }
 }

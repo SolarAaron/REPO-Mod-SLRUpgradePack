@@ -1,15 +1,25 @@
 using System.Collections;
 using System.Collections.Generic;
 using BepInEx.Configuration;
+using ExitGames.Client.Photon;
 using Photon.Pun;
+using REPOLib.Modules;
 using UnityEngine;
 using static HarmonyLib.AccessTools;
+using Object = UnityEngine.Object;
 
 namespace SLRUpgradePack.UpgradeManagers;
 
 public class ExtraLifeUpgrade : UpgradeBase<float> {
     public ConfigEntry<int> RevivePercent { get; protected set; }
     internal Dictionary<string, ExtraLife> ExtraLives { get; set; } = new();
+    public static NetworkedEvent ExtraLifeEvent = new NetworkedEvent("Extra Life", ExtraLifeAction);
+
+    private static void ExtraLifeAction(EventData e) {
+        var dict = (Dictionary<string, string>)e.CustomData;
+        var extraLife = SLRUpgradePack.ExtraLifeUpgradeInstance.ExtraLives[dict["player"]];
+        extraLife.SetViewId(int.Parse(dict["viewId"]));
+    }
 
     public ExtraLifeUpgrade(bool enabled, float upgradeAmount, bool exponential, float exponentialAmount,
                             ConfigFile config, AssetBundle assetBundle, int revivePercent, float priceMultiplier) :
@@ -42,7 +52,14 @@ public class ExtraLife : MonoBehaviour {
     private FieldRef<PlayerDeathHead, bool> _inExtractionPointRef = FieldRefAccess<PlayerDeathHead, bool>("inExtractionPoint");
 
     private void Update() {
-        if (!SemiFunc.IsMasterClientOrSingleplayer()) return; // host handles all calculation
+        if (player != SemiFunc.PlayerAvatarLocal()) return;
+        if (SemiFunc.IsMultiplayer() && photonView.ViewID == 0) {
+            PhotonNetwork.AllocateViewID(photonView);
+            var eventContent = new Dictionary<string, string>();
+            eventContent["player"] = SemiFunc.PlayerGetSteamID(player);
+            eventContent["viewId"] = photonView.ViewID.ToString();
+            ExtraLifeUpgrade.ExtraLifeEvent.RaiseEvent(eventContent, NetworkingEvents.RaiseOthers, SendOptions.SendReliable);
+        }
 
         if (player.playerHealth) {
             var extraLifeUpgrade = SLRUpgradePack.ExtraLifeUpgradeInstance;
@@ -92,7 +109,10 @@ public class ExtraLife : MonoBehaviour {
 
     private void Start() {
         SLRUpgradePack.Logger.LogInfo($"{SemiFunc.PlayerGetName(player)} has obtained extra lives");
-        photonView = gameObject.AddComponent<PhotonView>();
+        if (!TryGetComponent<PhotonView>(out photonView)) {
+            photonView = gameObject.AddComponent<PhotonView>();
+        }
+
         StartCoroutine(MovementCheck());
     }
 
@@ -107,5 +127,10 @@ public class ExtraLife : MonoBehaviour {
             SLRUpgradePack.Logger.LogDebug($"{SemiFunc.PlayerGetName(player)} is moving: {_isMoving}");
             currentPosition = nextPosition;
         }
+    }
+
+    internal void SetViewId(int id) {
+        photonView.ViewID = id;
+        photonView.TransferOwnership(player.photonView.Owner);
     }
 }

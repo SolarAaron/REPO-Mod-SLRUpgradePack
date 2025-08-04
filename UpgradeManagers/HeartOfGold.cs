@@ -1,9 +1,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using BepInEx.Configuration;
+using ExitGames.Client.Photon;
 using HarmonyLib;
 using Newtonsoft.Json;
 using Photon.Pun;
+using REPOLib.Modules;
 using UnityEngine;
 using static HarmonyLib.AccessTools;
 using Object = UnityEngine.Object;
@@ -13,6 +15,13 @@ namespace SLRUpgradePack.UpgradeManagers;
 public class HeartOfGoldUpgrade : UpgradeBase<float> {
     public ConfigEntry<float> BaseHeartValue { get; protected set; }
     internal Dictionary<string, GoldenHeart> GoldenHearts { get; set; } = new();
+    public static NetworkedEvent HeartOfGoldEvent = new NetworkedEvent("Heart Of Gold", HeartOfGoldAction);
+
+    private static void HeartOfGoldAction(EventData e) {
+        var dict = (Dictionary<string, string>)e.CustomData;
+        var heart = SLRUpgradePack.HeartOfGoldUpgradeInstance.GoldenHearts[dict["player"]];
+        heart.SetViewId(int.Parse(dict["viewId"]));
+    }
 
     public HeartOfGoldUpgrade(bool enabled, float upgradeAmount, bool exponential, float exponentialAmount,
                               ConfigFile config, AssetBundle assetBundle, float baseValue, float priceMultiplier) :
@@ -50,7 +59,9 @@ public class GoldenHeart : MonoBehaviour {
     private readonly FieldRef<ValuableObject, float> _dollarValueCurrentRef = FieldRefAccess<ValuableObject, float>("dollarValueCurrent");
 
     private void Start() {
-        photonView = gameObject.GetComponent<PhotonView>();
+        if (!TryGetComponent<PhotonView>(out photonView)) {
+            photonView = gameObject.AddComponent<PhotonView>();
+        }
     }
 
     public void DestroyOnlyMe() {
@@ -135,6 +146,14 @@ public class GoldenHeart : MonoBehaviour {
         if (lastLevel == heartOfGoldUpgrade.UpgradeRegister.GetLevel(player) &&
             lastHealth == _healthRef.Invoke(player.playerHealth)) return;
 
+        if (SemiFunc.IsMultiplayer() && photonView.ViewID == 0) {
+            PhotonNetwork.AllocateViewID(photonView);
+            var eventContent = new Dictionary<string, string>();
+            eventContent["player"] = SemiFunc.PlayerGetSteamID(player);
+            eventContent["viewId"] = photonView.ViewID.ToString();
+            HeartOfGoldUpgrade.HeartOfGoldEvent.RaiseEvent(eventContent, NetworkingEvents.RaiseOthers, SendOptions.SendReliable);
+        }
+
         lastLevel = heartOfGoldUpgrade.UpgradeRegister.GetLevel(player);
         lastHealth = _healthRef.Invoke(player.playerHealth);
 
@@ -169,10 +188,15 @@ public class GoldenHeart : MonoBehaviour {
     private void PauseLogicRPC(bool pause) {
         Pause = pause;
     }
+
+    internal void SetViewId(int id) {
+        photonView.ViewID = id;
+        photonView.TransferOwnership(player.photonView.Owner);
+    }
 }
 
 [HarmonyPatch(typeof(ExtractionPoint))]
-public class ExrtractionPointdestoryPatch {
+public class ExtractionPointDestroyPatch {
     private static FieldRef<RoundDirector, int>? _totalHaulRef = FieldRefAccess<RoundDirector, int>("totalHaul");
 
     [HarmonyPatch("DestroyAllPhysObjectsInHaulList")]

@@ -1,7 +1,14 @@
+# v0.2.1
+
+## The second great networking update
+
+### New textures for All Original Upgrades thanks to @Kizzycocoa
+
+* Fixes for syncing guest players using Regeneration, Extra Life and Heart Of Gold
+* Add checks to avoid running logic for disabled upgrades
+
 # v0.1.5
-
 ## New textures for Map Player Tracker, Map Enemy Tracker and Map Value Tracker thanks to @Kizzycocoa
-
 * Beta texture for Extra Life also thanks to @Kizzycocoa
 * Fixes for Extra Life and Heart Of Gold in multiplayer scenarios
 * Fixes for Map Value Tracker only counting newly spawned items

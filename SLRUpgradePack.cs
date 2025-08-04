@@ -11,7 +11,7 @@ using Resources = SLRUpgradePack.Properties.Resources;
 
 namespace SLRUpgradePack;
 
-[BepInPlugin("SolarAaron.SLRUpgradePack", "SLRUpgradePack", "0.1.5")]
+[BepInPlugin("SolarAaron.SLRUpgradePack", "SLRUpgradePack", "0.2.1")]
 [BepInDependency(MyPluginInfo.PLUGIN_GUID)]
 [BepInDependency("x753.CustomColors", BepInDependency.DependencyFlags.SoftDependency)]
 public class SLRUpgradePack : BaseUnityPlugin {
@@ -83,54 +83,65 @@ public class SLRUpgradePack : BaseUnityPlugin {
 
         var actions = new List<Action>();
 
-        if (PhysGrabberPatch.Prepare())
+        if (PhysGrabberPatch.Prepare() && OverchargeUpgradeInstance.UpgradeEnabled.Value)
             foreach (var pair in OverchargeUpgradeInstance.UpgradeRegister.PlayerDictionary)
                 if (pair.Value < OverchargeUpgradeInstance.StartingAmount.Value)
                     actions.Add(() => OverchargeUpgradeInstance.UpgradeRegister.SetLevel(pair.Key, OverchargeUpgradeInstance.StartingAmount.Value));
 
-        foreach (var pair in ArmorUpgradeInstance.UpgradeRegister.PlayerDictionary)
-            if (pair.Value < ArmorUpgradeInstance.StartingAmount.Value)
-                actions.Add(() => ArmorUpgradeInstance.UpgradeRegister.SetLevel(pair.Key, ArmorUpgradeInstance.StartingAmount.Value));
+        if (ArmorUpgradeInstance.UpgradeEnabled.Value)
+            foreach (var pair in ArmorUpgradeInstance.UpgradeRegister.PlayerDictionary)
+                if (pair.Value < ArmorUpgradeInstance.StartingAmount.Value)
+                    actions.Add(() => ArmorUpgradeInstance.UpgradeRegister.SetLevel(pair.Key, ArmorUpgradeInstance.StartingAmount.Value));
 
-        foreach (var pair in ObjectValueUpgradeInstance.UpgradeRegister.PlayerDictionary)
-            if (pair.Value < ObjectValueUpgradeInstance.StartingAmount.Value)
-                actions.Add(() => ObjectValueUpgradeInstance.UpgradeRegister.SetLevel(pair.Key, ObjectValueUpgradeInstance.StartingAmount.Value));
+        if (ObjectValueUpgradeInstance.UpgradeEnabled.Value)
+            foreach (var pair in ObjectValueUpgradeInstance.UpgradeRegister.PlayerDictionary)
+                if (pair.Value < ObjectValueUpgradeInstance.StartingAmount.Value)
+                    actions.Add(() => ObjectValueUpgradeInstance.UpgradeRegister.SetLevel(pair.Key, ObjectValueUpgradeInstance.StartingAmount.Value));
 
-        foreach (var pair in ObjectDurabilityUpgradeInstance.UpgradeRegister.PlayerDictionary)
-            if (pair.Value < ObjectDurabilityUpgradeInstance.StartingAmount.Value)
-                actions.Add(() => ObjectDurabilityUpgradeInstance.UpgradeRegister.SetLevel(pair.Key, ObjectDurabilityUpgradeInstance.StartingAmount.Value));
+        if (ObjectDurabilityUpgradeInstance.UpgradeEnabled.Value)
+            foreach (var pair in ObjectDurabilityUpgradeInstance.UpgradeRegister.PlayerDictionary)
+                if (pair.Value < ObjectDurabilityUpgradeInstance.StartingAmount.Value)
+                    actions.Add(() => ObjectDurabilityUpgradeInstance.UpgradeRegister.SetLevel(pair.Key, ObjectDurabilityUpgradeInstance.StartingAmount.Value));
 
-        foreach (var pair in ValuableDensityUpgradeInstance.UpgradeRegister.PlayerDictionary)
-            if (pair.Value < ValuableDensityUpgradeInstance.StartingAmount.Value)
-                actions.Add(() => ValuableDensityUpgradeInstance.UpgradeRegister.SetLevel(pair.Key, ValuableDensityUpgradeInstance.StartingAmount.Value));
+        if (ValuableDensityUpgradeInstance.UpgradeEnabled.Value)
+            foreach (var pair in ValuableDensityUpgradeInstance.UpgradeRegister.PlayerDictionary)
+                if (pair.Value < ValuableDensityUpgradeInstance.StartingAmount.Value)
+                    actions.Add(() => ValuableDensityUpgradeInstance.UpgradeRegister.SetLevel(pair.Key, ValuableDensityUpgradeInstance.StartingAmount.Value));
 
-        foreach (var pair in HeartOfGoldUpgradeInstance.UpgradeRegister.PlayerDictionary)
-            if (pair.Value < HeartOfGoldUpgradeInstance.StartingAmount.Value)
-                actions.Add(() => HeartOfGoldUpgradeInstance.UpgradeRegister.SetLevel(pair.Key, HeartOfGoldUpgradeInstance.StartingAmount.Value));
+        if (HeartOfGoldUpgradeInstance.UpgradeEnabled.Value)
+            foreach (var pair in HeartOfGoldUpgradeInstance.UpgradeRegister.PlayerDictionary)
+                if (pair.Value < HeartOfGoldUpgradeInstance.StartingAmount.Value)
+                    actions.Add(() => HeartOfGoldUpgradeInstance.UpgradeRegister.SetLevel(pair.Key, HeartOfGoldUpgradeInstance.StartingAmount.Value));
 
-        foreach (var pair in RegenerationUpgradeInstance.UpgradeRegister.PlayerDictionary)
-            if (pair.Value < RegenerationUpgradeInstance.StartingAmount.Value)
-                actions.Add(() => RegenerationUpgradeInstance.UpgradeRegister.SetLevel(pair.Key, RegenerationUpgradeInstance.StartingAmount.Value));
+        if (RegenerationUpgradeInstance.UpgradeEnabled.Value)
+            foreach (var pair in RegenerationUpgradeInstance.UpgradeRegister.PlayerDictionary)
+                if (pair.Value < RegenerationUpgradeInstance.StartingAmount.Value)
+                    actions.Add(() => RegenerationUpgradeInstance.UpgradeRegister.SetLevel(pair.Key, RegenerationUpgradeInstance.StartingAmount.Value));
 
-        foreach (var pair in ExtraLifeUpgradeInstance.UpgradeRegister.PlayerDictionary)
-            if (pair.Value < ExtraLifeUpgradeInstance.StartingAmount.Value)
-                actions.Add(() => ExtraLifeUpgradeInstance.UpgradeRegister.SetLevel(pair.Key, ExtraLifeUpgradeInstance.StartingAmount.Value));
+        if (ExtraLifeUpgradeInstance.UpgradeEnabled.Value)
+            foreach (var pair in ExtraLifeUpgradeInstance.UpgradeRegister.PlayerDictionary)
+                if (pair.Value < ExtraLifeUpgradeInstance.StartingAmount.Value)
+                    actions.Add(() => ExtraLifeUpgradeInstance.UpgradeRegister.SetLevel(pair.Key, ExtraLifeUpgradeInstance.StartingAmount.Value));
 
-        foreach (var pair in MapEnemyTrackerUpgradeInstance.UpgradeRegister.PlayerDictionary)
-            if (pair.Value < MapEnemyTrackerUpgradeInstance.StartingAmount.Value)
-                actions.Add(() => MapEnemyTrackerUpgradeInstance.UpgradeRegister.SetLevel(pair.Key, MapEnemyTrackerUpgradeInstance.StartingAmount.Value));
+        if (MapEnemyTrackerUpgradeInstance.UpgradeEnabled.Value)
+            foreach (var pair in MapEnemyTrackerUpgradeInstance.UpgradeRegister.PlayerDictionary)
+                if (pair.Value < MapEnemyTrackerUpgradeInstance.StartingAmount.Value)
+                    actions.Add(() => MapEnemyTrackerUpgradeInstance.UpgradeRegister.SetLevel(pair.Key, MapEnemyTrackerUpgradeInstance.StartingAmount.Value));
 
-        foreach (var pair in MapPlayerTrackerUpgradeInstance.UpgradeRegister.PlayerDictionary)
-            if (pair.Value < MapPlayerTrackerUpgradeInstance.StartingAmount.Value)
-                actions.Add(() => MapPlayerTrackerUpgradeInstance.UpgradeRegister.SetLevel(pair.Key, MapPlayerTrackerUpgradeInstance.StartingAmount.Value));
+        if (MapPlayerTrackerUpgradeInstance.UpgradeEnabled.Value)
+            foreach (var pair in MapPlayerTrackerUpgradeInstance.UpgradeRegister.PlayerDictionary)
+                if (pair.Value < MapPlayerTrackerUpgradeInstance.StartingAmount.Value)
+                    actions.Add(() => MapPlayerTrackerUpgradeInstance.UpgradeRegister.SetLevel(pair.Key, MapPlayerTrackerUpgradeInstance.StartingAmount.Value));
 
-        foreach (var pair in MapValueTrackerUpgradeInstance.UpgradeRegister.PlayerDictionary)
-            if (pair.Value < MapValueTrackerUpgradeInstance.StartingAmount.Value)
-                actions.Add(() => MapValueTrackerUpgradeInstance.UpgradeRegister.SetLevel(pair.Key, MapValueTrackerUpgradeInstance.StartingAmount.Value));
+        if (MapValueTrackerUpgradeInstance.UpgradeEnabled.Value)
+            foreach (var pair in MapValueTrackerUpgradeInstance.UpgradeRegister.PlayerDictionary)
+                if (pair.Value < MapValueTrackerUpgradeInstance.StartingAmount.Value)
+                    actions.Add(() => MapValueTrackerUpgradeInstance.UpgradeRegister.SetLevel(pair.Key, MapValueTrackerUpgradeInstance.StartingAmount.Value));
 
-        foreach (var pair in SprintUsageUpgradeInstance.UpgradeRegister.PlayerDictionary)
-            if (pair.Value < SprintUsageUpgradeInstance.StartingAmount.Value)
-                actions.Add(() => SprintUsageUpgradeInstance.UpgradeRegister.SetLevel(pair.Key, SprintUsageUpgradeInstance.StartingAmount.Value));
+        if (SprintUsageUpgradeInstance.UpgradeEnabled.Value)
+            foreach (var pair in SprintUsageUpgradeInstance.UpgradeRegister.PlayerDictionary)
+                if (pair.Value < SprintUsageUpgradeInstance.StartingAmount.Value)
+                    actions.Add(() => SprintUsageUpgradeInstance.UpgradeRegister.SetLevel(pair.Key, SprintUsageUpgradeInstance.StartingAmount.Value));
 
         actions.ForEach(action => action.Invoke());
     }

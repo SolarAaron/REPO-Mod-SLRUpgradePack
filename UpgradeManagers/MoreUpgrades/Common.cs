@@ -11,9 +11,11 @@ internal class IntegrationResource {
 
 [HarmonyPatch(typeof(ShopManager), "GetAllItemsFromStatsManager")]
 public class ShopManagerSingleUsePatch {
+    private static readonly List<string> SingleUse = ["Item Upgrade Map Enemy Tracker", "Item Upgrade Map Player Tracker", "Item Upgrade Map Value Tracker"];
+
     private static void Prefix(ShopManager __instance) {
         foreach (Item obj in StatsManager.instance.itemDictionary.Values) {
-            if (((List<string>) ["Item Upgrade Map Enemy Tracker", "Item Upgrade Map Player Tracker", "Item Upgrade Map Value Tracker"]).Contains(obj.itemAssetName)) {
+            if (SingleUse.Contains(obj.itemAssetName)) {
                 obj.maxPurchaseAmount = GameDirector.instance.PlayerList.Count;
             }
         }
