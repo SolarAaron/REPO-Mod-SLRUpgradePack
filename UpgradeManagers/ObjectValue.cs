@@ -14,7 +14,7 @@ public class ObjectValueUpgrade : UpgradeBase<float> {
     public ConfigEntry<bool> UpgradeScalesSurplus { get; protected set; }
 
     public ObjectValueUpgrade(bool enabled, float upgradeAmount, bool exponential, float exponentialAmount, ConfigFile config, AssetBundle assetBundle, float priceMultiplier) :
-        base("Object Value", "assets/repo/mods/resources/items/items/item upgrade value.asset", enabled, upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, true, 2000, 100000, true, false) {
+        base("Object Value", "assets/repo/mods/resources/items/items/item upgrade value lib.asset", enabled, upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, true, true, ((int?) null)) {
         UpgradeScalesSurplus = config.Bind("Object Value Upgrade", "Scale Surplus Bag", false,
                                            "Should the Object Value Upgrade scale the extraction surplus bag?");
     }
@@ -63,7 +63,7 @@ public class ValuableObjectValuePatch {
 
                 if (FixedValueRef.Invoke(instance) != 0) {
                     FixedValueRef.Invoke(instance) =
-                        (int)Math.Ceiling(objectValueUpgrade.Calculate(FixedValueRef.Invoke(instance), SemiFunc.PlayerGetFromSteamID(pair.Key), pair.Value));
+                        (int) Math.Ceiling(objectValueUpgrade.Calculate(FixedValueRef.Invoke(instance), SemiFunc.PlayerGetFromSteamID(pair.Key), pair.Value));
                 }
 
                 finalValue = objectValueUpgrade.Calculate(finalValue, SemiFunc.PlayerGetFromSteamID(pair.Key), pair.Value);

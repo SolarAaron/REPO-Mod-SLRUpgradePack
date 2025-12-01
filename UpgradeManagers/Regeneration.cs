@@ -13,7 +13,7 @@ public class RegenerationComponent : MonoBehaviour {
     private readonly FieldRef<PlayerHealth, int> _healthRef = FieldRefAccess<PlayerHealth, int>("health");
 
     private void Update() {
-        if (!SemiFunc.IsMasterClientOrSingleplayer()) return; // host handles all calculation
+        if (SemiFunc.PlayerAvatarLocal() != player) return; // every man on their own
 
         var regenerationUpgrade = SLRUpgradePack.RegenerationUpgradeInstance;
 
@@ -26,7 +26,7 @@ public class RegenerationComponent : MonoBehaviour {
                                           regenerationUpgrade.UpgradeRegister.GetLevel(player));
 
         if (pendingHealing >= 1) {
-            player.playerHealth.HealOther((int)Math.Floor(pendingHealing), false);
+            player.playerHealth.HealOther((int) Math.Floor(pendingHealing), false);
             pendingHealing -= Mathf.Floor(pendingHealing);
         }
     }
@@ -37,8 +37,8 @@ public class RegenerationUpgrade : UpgradeBase<float> {
     internal Dictionary<string, RegenerationComponent> Regenerations { get; set; } = new();
 
     public RegenerationUpgrade(bool enabled, float upgradeAmount, bool exponential, float exponentialAmount,
-                               ConfigFile config, AssetBundle assetBundle, float baseHealing, float priceMultiplier) : base("Regeneration", "assets/repo/mods/resources/items/items/item upgrade regeneration.asset", enabled, upgradeAmount,
-                                                                                                                            exponential, exponentialAmount, config, assetBundle, priceMultiplier, true, 2000, 100000, true, false) {
+                               ConfigFile config, AssetBundle assetBundle, float baseHealing, float priceMultiplier) : base("Regeneration", "assets/repo/mods/resources/items/items/item upgrade regeneration lib.asset", enabled, upgradeAmount,
+                                                                                                                            exponential, exponentialAmount, config, assetBundle, priceMultiplier, true, true, ((int?) null)) {
         BaseHealing = config.Bind("Regeneration Upgrade", "Base Healing", baseHealing, new ConfigDescription("Base Healing Amount", new AcceptableValueRange<float>(0f, 10f)));
     }
 

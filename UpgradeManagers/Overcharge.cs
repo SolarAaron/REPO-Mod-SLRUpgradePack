@@ -7,7 +7,7 @@ namespace SLRUpgradePack.UpgradeManagers;
 
 public class OverchargeUpgrade : UpgradeBase<float> {
     public OverchargeUpgrade(bool enabled, float upgradeAmount, bool exponential, float exponentialAmount, ConfigFile config, AssetBundle assetBundle, float priceMultiplier) :
-        base("Overcharge", "assets/repo/mods/resources/items/items/item upgrade overcharge.asset", enabled, upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, true, 2000, 100000, true, false) { }
+        base("Overcharge", "assets/repo/mods/resources/items/items/item upgrade overcharge lib.asset", enabled, upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, true, true, ((int?) null)) { }
 
     public override float Calculate(float value, PlayerAvatar player, int level) => DefaultCalculateFloatReduce(this, "Overcharge", value, player, level);
 }

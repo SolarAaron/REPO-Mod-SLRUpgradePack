@@ -51,12 +51,5 @@ namespace SLRUpgradePack.Properties {
                 return ((byte[])(obj));
             }
         }
-        
-        public static byte[] moreupgrades {
-            get {
-                object obj = ResourceManager.GetObject("moreupgrades", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
     }
 }

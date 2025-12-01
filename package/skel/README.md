@@ -1,4 +1,6 @@
-# SLR Upgrade Pack
+# SLR Upgrade Pack BETA release
+
+## Partial release for testing, to be followed up by full release
 
 The following Upgrades will be added to the shop:
 
@@ -11,7 +13,7 @@ Upgrade reduces damage from enemy and physics hits
 Upgrade reduces the speed at which the overcharge meter fills up
 
 ## Object Durability and Value Upgrades
-f
+
 Each upgrade increases resistance and value of objects, separately
 
 ## Valuable Density Upgrade
@@ -24,26 +26,12 @@ Upgrade makes the player valuable; default roughly $11 per HP remaining scaling 
 
 ## Regeneration Upgrade
 
-Upgrade gradualy restores player's health, starting at 1 hp/second
+Upgrade gradually restores player's health, starting at 1 hp/second
 
 ## Extra Life Upgrade
 
 Revives a player once per upgraded level. Upgrade levels are lost on reviving!
 
-## MoreUpgrades
+## Inventory Slot upgrade
 
-### Sprint Usage Upgrade
-
-Reduces sprint usage for each level
-
-### Map Player Tracker Upgrade
-
-Shows other players on the map
-
-### Map Enemy Tracker Upgrade
-
-Shows positions of enemies on the map
-
-### Map Value Tracker Upgrade
-
-Shows valuables left on the map and (optionally) how much they're worth
+Each level adds a new inventory slot, up to maximum of 9 slots (configurable)

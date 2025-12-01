@@ -21,8 +21,8 @@ public class ValuableDensityUpgrade : UpgradeBase<float> {
 
     public ValuableDensityUpgrade(bool enabled, float upgradeAmount, bool exponential, float exponentialAmount,
                                   ConfigFile config, AssetBundle assetBundle, float priceMultiplier) :
-        base("Valuable Density", "assets/repo/mods/resources/items/items/item upgrade valuable density.asset", enabled,
-             upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, true, 2000, 100000, true, false) { }
+        base("Valuable Density", "assets/repo/mods/resources/items/items/item upgrade valuable density lib.asset", enabled,
+             upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, true, true, ((int?) null)) { }
 
     public override float Calculate(float value, PlayerAvatar player, int level) =>
         DefaultCalculateFloatIncrease(this, "ValuableDensity", value, player, level);
@@ -76,7 +76,7 @@ public class LevelGeneratorPatch {
                         }
                     } else {
                         SLRUpgradePack.Logger.LogInfo("Setting Max Amount");
-                        totalMaxAmountTraverse.SetValue((int)Math.Ceiling(valuableDensityUpgrade.Calculate(totalMaxAmountTraverse.GetValue<int>(), SemiFunc.PlayerGetFromSteamID(pair.Key), pair.Value)));
+                        totalMaxAmountTraverse.SetValue((int) Math.Ceiling(valuableDensityUpgrade.Calculate(totalMaxAmountTraverse.GetValue<int>(), SemiFunc.PlayerGetFromSteamID(pair.Key), pair.Value)));
                     }
 
                     if (valuableDensityUpgrade.TotalMaxValueCurves.Count != 0) {

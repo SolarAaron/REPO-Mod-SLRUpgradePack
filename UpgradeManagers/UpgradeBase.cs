@@ -6,49 +6,80 @@ using System.Text.RegularExpressions;
 using BepInEx.Configuration;
 using HarmonyLib;
 using REPOLib.Modules;
+using REPOLib.Objects.Sdk;
 using UnityEngine;
 using static HarmonyLib.AccessTools;
 
 namespace SLRUpgradePack.UpgradeManagers;
 
 public abstract class UpgradeBase<T> {
+    private string _name;
+    private string _assetName;
+    private AssetBundle _assetBundle;
     public ConfigEntry<bool> UpgradeEnabled { get; protected set; }
     public ConfigEntry<T> UpgradeAmount { get; protected set; }
     public ConfigEntry<bool> UpgradeExponential { get; protected set; }
     public ConfigEntry<T> UpgradeExpAmount { get; protected set; }
     public ConfigEntry<float> PriceMultiplier { get; protected set; }
     public ConfigEntry<int> StartingAmount { get; protected set; }
+    public ConfigEntry<int> MaxLevel { get; protected set; }
     public PlayerUpgrade UpgradeRegister { get; protected set; }
 
-    protected UpgradeBase(string name, string assetName, bool enabled, T upgradeAmount, bool exponential, T exponentialAmount, ConfigFile config, AssetBundle assetBundle, float priceMultiplier, bool configureAmount, int minPrice,
-                          int maxPrice, bool canBeExponential, bool singleUse) {
-        UpgradeEnabled = config.Bind($"{name} Upgrade", "Enabled", enabled,
-                                     $"Should the {name} Upgrade be enabled?");
-        PriceMultiplier = config.Bind($"{name} Upgrade", "Price multiplier", priceMultiplier, "Multiplier of upgrade base price");
-        StartingAmount = config.Bind($"{name} Upgrade", "Starting Amount", 0, $"How many levels of {name} to start a game with");
+    protected UpgradeBase(string name, string assetName, bool enabled, T upgradeAmount, bool exponential, T exponentialAmount, ConfigFile config, AssetBundle assetBundle, float priceMultiplier, bool configureAmount, bool canBeExponential, int? maxLevel) {
+        _name = name;
+        _assetName = assetName;
+        _assetBundle = assetBundle;
+
+        UpgradeEnabled = config.Bind($"{_name} Upgrade", "Enabled", enabled,
+                                     $"Should the {_name} Upgrade be enabled?");
+        PriceMultiplier = config.Bind($"{_name} Upgrade", "Price multiplier", priceMultiplier, "Multiplier of upgrade base price");
+        StartingAmount = config.Bind($"{_name} Upgrade", "Starting Amount", 0, $"How many levels of {_name} to start a game with");
 
         if (configureAmount) {
-            UpgradeAmount = config.Bind($"{name} Upgrade", $"{name} Upgrade Power", upgradeAmount,
-                                        $"How much the {name} Upgrade increments");
+            UpgradeAmount = config.Bind($"{_name} Upgrade", $"{_name} Upgrade Power", upgradeAmount,
+                                        $"How much the {_name} Upgrade increments");
             if (canBeExponential) {
-                UpgradeExponential = config.Bind($"{name} Upgrade", "Exponential upgrade", exponential,
-                                                 $"Should the {name} Upgrade stack exponentially?");
-                UpgradeExpAmount = config.Bind($"{name} Upgrade", $"{name} Upgrade Exponential Power", exponentialAmount,
-                                               $"How much the Exponential {name} upgrade increments");
+                UpgradeExponential = config.Bind($"{_name} Upgrade", "Exponential upgrade", exponential,
+                                                 $"Should the {_name} Upgrade stack exponentially?");
+                UpgradeExpAmount = config.Bind($"{_name} Upgrade", $"{_name} Upgrade Exponential Power", exponentialAmount,
+                                               $"How much the Exponential {_name} upgrade increments");
             }
         }
 
-        if (UpgradeEnabled.Value) {
-            Item upgradeItem = assetBundle.LoadAsset<Item>(assetName);
+        if (maxLevel.HasValue) {
+            MaxLevel = config.Bind<int>($"{_name} Upgrade", "Maximum Level", maxLevel.Value, new ConfigDescription("", new AcceptableValueRange<int>(0, maxLevel.Value)));
+        }
 
-            SLRUpgradePack.Logger.LogInfo($"Upgrade price range (default) {upgradeItem.value.valueMin} - {upgradeItem.value.valueMax}");
-            var newVal = ScriptableObject.CreateInstance<Value>();
-            newVal.valueMin = upgradeItem.value.valueMin * PriceMultiplier.Value;
-            newVal.valueMax = upgradeItem.value.valueMax * PriceMultiplier.Value;
-            upgradeItem.value = newVal;
-            Items.RegisterItem(upgradeItem);
-            UpgradeRegister = Upgrades.RegisterUpgrade(name.Replace(" ", ""), upgradeItem,
-                                                       InitUpgrade, UseUpgrade);
+        if (UpgradeEnabled.Value) {
+            RegisterUpgrade();
+        }
+
+        UpgradeEnabled.SettingChanged += UpgradeEnabledOnSettingChanged;
+    }
+
+    private void RegisterUpgrade() {
+        ItemContent upgradeItem = _assetBundle.LoadAsset<ItemContent>(_assetName);
+
+        SLRUpgradePack.Logger.LogInfo($"Upgrade price range (default) {upgradeItem.Prefab.item.value.valueMin} - {upgradeItem.Prefab.item.value.valueMax}");
+        var newVal = ScriptableObject.CreateInstance<Value>();
+        newVal.valueMin = upgradeItem.Prefab.item.value.valueMin * PriceMultiplier.Value;
+        newVal.valueMax = upgradeItem.Prefab.item.value.valueMax * PriceMultiplier.Value;
+        upgradeItem.Prefab.item.value = newVal;
+
+        var itemRef = Items.RegisterItem(upgradeItem);
+        UpgradeRegister = Upgrades.RegisterUpgrade(_name.Replace(" ", ""), upgradeItem.Prefab.item,
+                                                   InitUpgrade, UseUpgrade);
+    }
+
+    private void UpgradeEnabledOnSettingChanged(object sender, EventArgs e) {
+        if (UpgradeEnabled.Value) {
+            if (UpgradeRegister == null) {
+                RegisterUpgrade();
+            }
+
+            UpgradeRegister.Item.disabled = false;
+        } else {
+            if (UpgradeRegister != null) UpgradeRegister.Item.disabled = true;
         }
     }
 
@@ -76,7 +107,7 @@ public abstract class UpgradeBase<T> {
     public static float DefaultCalculateFloatReduce(UpgradeBase<float> instance, string name, float value,
                                                     PlayerAvatar player, int level) {
         if (level > 0)
-            if (instance.UpgradeExponential.Value) return (float)(value / Math.Pow(instance.UpgradeExpAmount.Value, level));
+            if (instance.UpgradeExponential.Value) return (float) (value / Math.Pow(instance.UpgradeExpAmount.Value, level));
             else return value / (1f + (instance.UpgradeAmount.Value * level));
         return value;
     }
@@ -84,7 +115,7 @@ public abstract class UpgradeBase<T> {
     public static float DefaultCalculateFloatIncrease(UpgradeBase<float> instance, string name, float value,
                                                       PlayerAvatar player, int level) {
         if (level > 0)
-            if (instance.UpgradeExponential.Value) return (float)(value * Math.Pow(instance.UpgradeExpAmount.Value, level));
+            if (instance.UpgradeExponential.Value) return (float) (value * Math.Pow(instance.UpgradeExpAmount.Value, level));
             else return value * (1f + (instance.UpgradeAmount.Value * level));
         return value;
     }
@@ -93,7 +124,7 @@ public abstract class UpgradeBase<T> {
         GameObject visuals = null;
         if (component.GetType() == typeof(EnemyParent)) {
             EnemyParent enemyParent = component as EnemyParent;
-            Enemy enemy = (Enemy)Field(typeof(EnemyParent), "Enemy").GetValue(component);
+            Enemy enemy = (Enemy) Field(typeof(EnemyParent), "Enemy").GetValue(component);
             try {
                 visuals = enemyParent.EnableObject.gameObject.GetComponentInChildren<Animator>().gameObject;
             } catch { }
@@ -141,7 +172,7 @@ public class EnumeratorWrapper : IEnumerable {
     }
 }
 
-[HarmonyPatch(typeof(StatsManager), nameof(StatsManager.FetchPlayerUpgrades))]
+[HarmonyPatch(typeof(StatsManager), nameof (StatsManager.FetchPlayerUpgrades))]
 public class StatsManagerPatch {
     private static bool Prefix(StatsManager __instance, ref string _steamID, ref Dictionary<string, int> __result) {
         Dictionary<string, int> dictionary = new Dictionary<string, int>();
@@ -181,5 +212,41 @@ public class StatsManagerPatch {
 
         __result = dictionary;
         return false;
+    }
+}
+
+[HarmonyPatch(typeof(ItemUpgrade), "PlayerUpgrade")]
+[HarmonyPriority(Priority.First)]
+public class ItemUpgradePatch {
+    private static FieldRef<ItemUpgrade, ItemToggle>? _itemToggleRef = FieldRefAccess<ItemUpgrade, ItemToggle>("itemToggle");
+    private static FieldRef<ItemToggle, int>? _playerTogglePhotonIdRef = FieldRefAccess<ItemToggle, int>("playerTogglePhotonId");
+    private static FieldRef<ItemUpgrade, ItemAttributes>? _itemAttributesRef = FieldRefAccess<ItemUpgrade, ItemAttributes>("itemAttributes");
+
+    private static bool Prefix(ItemUpgrade __instance) {
+        PlayerAvatar user = SemiFunc.PlayerAvatarGetFromPhotonID(_playerTogglePhotonIdRef.Invoke(_itemToggleRef.Invoke(__instance)));
+        switch (_itemAttributesRef.Invoke(__instance).item.itemName) {
+            case "Item Upgrade Inventory Slot": {
+                if (SLRUpgradePack.InventorySlotUpgradeInstance.UpgradeRegister.GetLevel(user) >= SLRUpgradePack.InventorySlotUpgradeInstance.MaxLevel.Value) return false;
+                return true;
+            }
+            default: return true;
+        }
+    }
+}
+
+[HarmonyPatch(typeof(ShopManager), "GetAllItemsFromStatsManager")]
+public class ShopManagerSingleUsePatch {
+    internal static readonly Dictionary<string, int> LimitedUse = new Dictionary<string, int>() { { "Item Upgrade Inventory Slot", SLRUpgradePack.InventorySlotUpgradeInstance.MaxLevel.Value } };
+
+    private static void Prefix(ShopManager __instance) {
+        foreach (Item obj in StatsManager.instance.itemDictionary.Values) {
+            if (LimitedUse.ContainsKey(obj.itemName)) {
+                obj.maxPurchaseAmount = GameDirector.instance.PlayerList.Count * LimitedUse[obj.itemName];
+            }
+        }
+    }
+
+    private static void Postfix(ShopManager __instance) {
+        __instance.potentialItemUpgrades.RemoveAll(item => item.disabled);
     }
 }

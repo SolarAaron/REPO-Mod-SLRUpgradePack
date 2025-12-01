@@ -5,15 +5,14 @@ using BepInEx.Logging;
 using HarmonyLib;
 using REPOLib;
 using SLRUpgradePack.UpgradeManagers;
-using SLRUpgradePack.UpgradeManagers.MoreUpgrades;
 using UnityEngine;
 using Resources = SLRUpgradePack.Properties.Resources;
 
 namespace SLRUpgradePack;
 
-[BepInPlugin("SolarAaron.SLRUpgradePack", "SLRUpgradePack", "0.2.1")]
 [BepInDependency(MyPluginInfo.PLUGIN_GUID)]
-[BepInDependency("x753.CustomColors", BepInDependency.DependencyFlags.SoftDependency)]
+[BepInDependency("bulletbot.keybindlib")]
+[BepInPlugin("SolarAaron.SLRUpgradePack", "SLRUpgradePack", "0.3.0b")]
 public class SLRUpgradePack : BaseUnityPlugin {
     internal static SLRUpgradePack Instance { get; private set; } = null!;
     internal new static ManualLogSource Logger => Instance._logger;
@@ -28,10 +27,7 @@ public class SLRUpgradePack : BaseUnityPlugin {
     public static HeartOfGoldUpgrade HeartOfGoldUpgradeInstance { get; private set; }
     public static RegenerationUpgrade RegenerationUpgradeInstance { get; private set; }
     public static ExtraLifeUpgrade ExtraLifeUpgradeInstance { get; private set; }
-    public static MapEnemyTrackerUpgrade MapEnemyTrackerUpgradeInstance { get; private set; }
-    public static MapPlayerTrackerUpgrade MapPlayerTrackerUpgradeInstance { get; private set; }
-    public static SprintUsageUpgrade SprintUsageUpgradeInstance { get; private set; }
-    public static MapValueTrackerUpgrade MapValueTrackerUpgradeInstance { get; private set; }
+    public static InventorySlotUpgrade InventorySlotUpgradeInstance { get; private set; }
 
     private void Awake() {
         Instance = this;
@@ -58,11 +54,7 @@ public class SLRUpgradePack : BaseUnityPlugin {
         HeartOfGoldUpgradeInstance = new HeartOfGoldUpgrade(true, 0.1f, false, 1.1f, Config, assetBundle, 10f, 2.5f);
         RegenerationUpgradeInstance = new RegenerationUpgrade(true, 0.1f, false, 1.1f, Config, assetBundle, .1f, 1.5f);
         ExtraLifeUpgradeInstance = new ExtraLifeUpgrade(true, 0.1f, false, 1.1f, Config, assetBundle, 5, 5f);
-
-        MapEnemyTrackerUpgradeInstance = new MapEnemyTrackerUpgrade(true, Config, assetBundle, 4f, true, Color.red, "", 2000, 3000);
-        MapPlayerTrackerUpgradeInstance = new MapPlayerTrackerUpgrade(true, Config, assetBundle, 4f, true, Color.blue, 2000, 3000, false);
-        SprintUsageUpgradeInstance = new SprintUsageUpgrade(true, Config, assetBundle, 0.5f, 2000, 3000);
-        MapValueTrackerUpgradeInstance = new MapValueTrackerUpgrade(true, Config, assetBundle, 3.5f, 2000, 3000, true);
+        InventorySlotUpgradeInstance = new InventorySlotUpgrade(true, 1, Config, assetBundle, 3f);
 
         Patch();
         Logger.LogInfo($"{Info.Metadata.GUID} v{Info.Metadata.Version} has loaded!");
@@ -123,25 +115,10 @@ public class SLRUpgradePack : BaseUnityPlugin {
                 if (pair.Value < ExtraLifeUpgradeInstance.StartingAmount.Value)
                     actions.Add(() => ExtraLifeUpgradeInstance.UpgradeRegister.SetLevel(pair.Key, ExtraLifeUpgradeInstance.StartingAmount.Value));
 
-        if (MapEnemyTrackerUpgradeInstance.UpgradeEnabled.Value)
-            foreach (var pair in MapEnemyTrackerUpgradeInstance.UpgradeRegister.PlayerDictionary)
-                if (pair.Value < MapEnemyTrackerUpgradeInstance.StartingAmount.Value)
-                    actions.Add(() => MapEnemyTrackerUpgradeInstance.UpgradeRegister.SetLevel(pair.Key, MapEnemyTrackerUpgradeInstance.StartingAmount.Value));
-
-        if (MapPlayerTrackerUpgradeInstance.UpgradeEnabled.Value)
-            foreach (var pair in MapPlayerTrackerUpgradeInstance.UpgradeRegister.PlayerDictionary)
-                if (pair.Value < MapPlayerTrackerUpgradeInstance.StartingAmount.Value)
-                    actions.Add(() => MapPlayerTrackerUpgradeInstance.UpgradeRegister.SetLevel(pair.Key, MapPlayerTrackerUpgradeInstance.StartingAmount.Value));
-
-        if (MapValueTrackerUpgradeInstance.UpgradeEnabled.Value)
-            foreach (var pair in MapValueTrackerUpgradeInstance.UpgradeRegister.PlayerDictionary)
-                if (pair.Value < MapValueTrackerUpgradeInstance.StartingAmount.Value)
-                    actions.Add(() => MapValueTrackerUpgradeInstance.UpgradeRegister.SetLevel(pair.Key, MapValueTrackerUpgradeInstance.StartingAmount.Value));
-
-        if (SprintUsageUpgradeInstance.UpgradeEnabled.Value)
-            foreach (var pair in SprintUsageUpgradeInstance.UpgradeRegister.PlayerDictionary)
-                if (pair.Value < SprintUsageUpgradeInstance.StartingAmount.Value)
-                    actions.Add(() => SprintUsageUpgradeInstance.UpgradeRegister.SetLevel(pair.Key, SprintUsageUpgradeInstance.StartingAmount.Value));
+        if (InventorySlotUpgradeInstance.UpgradeEnabled.Value)
+            foreach (var pair in InventorySlotUpgradeInstance.UpgradeRegister.PlayerDictionary)
+                if (pair.Value < InventorySlotUpgradeInstance.StartingAmount.Value)
+                    actions.Add(() => InventorySlotUpgradeInstance.UpgradeRegister.SetLevel(pair.Key, InventorySlotUpgradeInstance.StartingAmount.Value));
 
         actions.ForEach(action => action.Invoke());
     }

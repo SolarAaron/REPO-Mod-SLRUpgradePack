@@ -1,3 +1,8 @@
+# v0.3.0b
+
+* Fix for regeneration not working with guest players
+* Adds Inventory slot upgrade
+
 # v0.2.1
 
 ## The second great networking update

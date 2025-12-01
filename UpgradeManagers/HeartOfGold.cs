@@ -18,15 +18,15 @@ public class HeartOfGoldUpgrade : UpgradeBase<float> {
     public static NetworkedEvent HeartOfGoldEvent = new NetworkedEvent("Heart Of Gold", HeartOfGoldAction);
 
     private static void HeartOfGoldAction(EventData e) {
-        var dict = (Dictionary<string, string>)e.CustomData;
+        var dict = (Dictionary<string, string>) e.CustomData;
         var heart = SLRUpgradePack.HeartOfGoldUpgradeInstance.GoldenHearts[dict["player"]];
         heart.SetViewId(int.Parse(dict["viewId"]));
     }
 
     public HeartOfGoldUpgrade(bool enabled, float upgradeAmount, bool exponential, float exponentialAmount,
                               ConfigFile config, AssetBundle assetBundle, float baseValue, float priceMultiplier) :
-        base("Heart Of Gold", "assets/repo/mods/resources/items/items/item upgrade heart of gold.asset", enabled,
-             upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, true, 2000, 100000, true, false) {
+        base("Heart Of Gold", "assets/repo/mods/resources/items/items/item upgrade heart of gold lib.asset", enabled,
+             upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, true, true, ((int?) null)) {
         BaseHeartValue =
             config.Bind("Heart Of Gold Upgrade", "Base Value", baseValue, "Base value to scale by player health");
     }
@@ -62,6 +62,8 @@ public class GoldenHeart : MonoBehaviour {
         if (!TryGetComponent<PhotonView>(out photonView)) {
             photonView = gameObject.AddComponent<PhotonView>();
         }
+
+        Pause = false;
     }
 
     public void DestroyOnlyMe() {
@@ -135,7 +137,7 @@ public class GoldenHeart : MonoBehaviour {
     }
 
     private void Update() {
-        if (!SemiFunc.IsMasterClientOrSingleplayer()) return;
+        if (SemiFunc.PlayerAvatarLocal() != player) return;
         if (!Traverse.Create(RoundDirector.instance).Field("extractionPointsFetched").GetValue<bool>()) return;
 
         var heartOfGoldUpgrade = SLRUpgradePack.HeartOfGoldUpgradeInstance;
@@ -208,9 +210,9 @@ public class ExtractionPointDestroyPatch {
 
         foreach (GameObject dollarHaul in RoundDirector.instance.dollarHaulList) {
             if (dollarHaul && dollarHaul.GetComponent<PhysGrabObject>()) {
-                _totalHaulRef.Invoke(RoundDirector.instance) += (int)Traverse
-                                                                    .Create(dollarHaul.GetComponent<ValuableObject>())
-                                                                    .Field("dollarValueCurrent").GetValue<float>();
+                _totalHaulRef.Invoke(RoundDirector.instance) += (int) Traverse
+                                                                     .Create(dollarHaul.GetComponent<ValuableObject>())
+                                                                     .Field("dollarValueCurrent").GetValue<float>();
 
                 if (dollarHaul.TryGetComponent<ValuableObject>(out var valuableObject) && valuableObject.name.Equals("Health Grab")) {
                     foreach (var idHeart in heartOfGoldUpgrade.GoldenHearts)
@@ -246,10 +248,10 @@ public class ExtractionPointDestroyPatch {
             !heartOfGoldUpgrade.UpgradeEnabled.Value)
             return true;
 
-        _totalHaulRef.Invoke(RoundDirector.instance) += (int)Traverse
-                                                            .Create(RoundDirector.instance.dollarHaulList[0]
-                                                                                 .GetComponent<ValuableObject>())
-                                                            .Field("dollarValueCurrent").GetValue<float>();
+        _totalHaulRef.Invoke(RoundDirector.instance) += (int) Traverse
+                                                             .Create(RoundDirector.instance.dollarHaulList[0]
+                                                                                  .GetComponent<ValuableObject>())
+                                                             .Field("dollarValueCurrent").GetValue<float>();
 
         if (RoundDirector.instance.dollarHaulList[0].TryGetComponent<ValuableObject>(out var valuableObject) && valuableObject.name.Equals("Health Grab")) {
             foreach (var idHeart in heartOfGoldUpgrade.GoldenHearts)

@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using BepInEx.Configuration;
 using ExitGames.Client.Photon;
+using HarmonyLib;
 using Photon.Pun;
 using REPOLib.Modules;
 using UnityEngine;
@@ -16,15 +17,15 @@ public class ExtraLifeUpgrade : UpgradeBase<float> {
     public static NetworkedEvent ExtraLifeEvent = new NetworkedEvent("Extra Life", ExtraLifeAction);
 
     private static void ExtraLifeAction(EventData e) {
-        var dict = (Dictionary<string, string>)e.CustomData;
+        var dict = (Dictionary<string, string>) e.CustomData;
         var extraLife = SLRUpgradePack.ExtraLifeUpgradeInstance.ExtraLives[dict["player"]];
         extraLife.SetViewId(int.Parse(dict["viewId"]));
     }
 
     public ExtraLifeUpgrade(bool enabled, float upgradeAmount, bool exponential, float exponentialAmount,
                             ConfigFile config, AssetBundle assetBundle, int revivePercent, float priceMultiplier) :
-        base("Extra Life", "assets/repo/mods/resources/items/items/item upgrade extra life.asset", enabled,
-             upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, false, 2000, 100000, true, false) {
+        base("Extra Life", "assets/repo/mods/resources/items/items/item upgrade extra life lib.asset", enabled,
+             upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, false, true, ((int?) null)) {
         RevivePercent = config.Bind("Extra Life Upgrade", "revivePercent", revivePercent, "Percentage of health to recover when revived");
     }
 
@@ -45,14 +46,15 @@ public class ExtraLifeUpgrade : UpgradeBase<float> {
 public class ExtraLife : MonoBehaviour {
     public PlayerDeathHead playerHead { get; set; }
     public PlayerAvatar player { get; set; }
-    private bool _isMoving;
     private Coroutine? reviving;
     private PhotonView photonView;
     private FieldRef<PlayerHealth, int> _healthRef = FieldRefAccess<PlayerHealth, int>("health");
     private FieldRef<PlayerDeathHead, bool> _inExtractionPointRef = FieldRefAccess<PlayerDeathHead, bool>("inExtractionPoint");
+    private FieldRef<PlayerDeathHead, PhysGrabObject> _physGrabObjectRef = FieldRefAccess<PlayerDeathHead, PhysGrabObject>("physGrabObject");
 
     private void Update() {
         if (player != SemiFunc.PlayerAvatarLocal()) return;
+        if (!Traverse.Create(RoundDirector.instance).Field("extractionPointsFetched").GetValue<bool>()) return;
         if (SemiFunc.IsMultiplayer() && photonView.ViewID == 0) {
             PhotonNetwork.AllocateViewID(photonView);
             var eventContent = new Dictionary<string, string>();
@@ -66,7 +68,7 @@ public class ExtraLife : MonoBehaviour {
 
             if (!extraLifeUpgrade.UpgradeEnabled.Value) return;
 
-            if (_healthRef.Invoke(player.playerHealth) == 0 && extraLifeUpgrade.UpgradeRegister.GetLevel(player) > 0 && !_isMoving && !_inExtractionPointRef.Invoke(playerHead) && reviving == null) {
+            if (_healthRef.Invoke(player.playerHealth) == 0 && extraLifeUpgrade.UpgradeRegister.GetLevel(player) > 0 && !_inExtractionPointRef.Invoke(playerHead) && reviving == null) {
                 reviving = StartCoroutine(BeginReviving());
             }
         } else {
@@ -80,18 +82,12 @@ public class ExtraLife : MonoBehaviour {
         var extraLifeUpgrade = SLRUpgradePack.ExtraLifeUpgradeInstance;
         var maxHealthRef = FieldRefAccess<PlayerHealth, int>("maxHealth");
 
-        while (_isMoving) {
-            var deadTimerRef = FieldRefAccess<PlayerAvatar, float>("deadTimer");
-            deadTimerRef.Invoke(player) += 1;
-            yield return new WaitForSecondsRealtime(0.1f);
-            SLRUpgradePack.Logger.LogInfo("Pause attempt to revive moving head");
-        }
-
         if (_inExtractionPointRef.Invoke(playerHead)) {
             reviving = null;
             yield break;
         }
 
+        _physGrabObjectRef.Invoke(playerHead).centerPoint = Vector3.zero;
         player.Revive();
         player.playerHealth.HealOther(Mathf.FloorToInt(maxHealthRef.Invoke(player.playerHealth) * extraLifeUpgrade.RevivePercent.Value / 100f), true);
 
@@ -111,21 +107,6 @@ public class ExtraLife : MonoBehaviour {
         SLRUpgradePack.Logger.LogInfo($"{SemiFunc.PlayerGetName(player)} has obtained extra lives");
         if (!TryGetComponent<PhotonView>(out photonView)) {
             photonView = gameObject.AddComponent<PhotonView>();
-        }
-
-        StartCoroutine(MovementCheck());
-    }
-
-    private IEnumerator MovementCheck() {
-        while (!playerHead) yield return null;
-        while (!playerHead.transform) yield return null;
-        Vector3 currentPosition = playerHead.transform.position;
-        while (true) {
-            yield return new WaitForSecondsRealtime(0.5f);
-            Vector3 nextPosition = playerHead.transform.position;
-            _isMoving = Vector3.Distance(currentPosition, nextPosition) >= 0.01f;
-            SLRUpgradePack.Logger.LogDebug($"{SemiFunc.PlayerGetName(player)} is moving: {_isMoving}");
-            currentPosition = nextPosition;
         }
     }
 
