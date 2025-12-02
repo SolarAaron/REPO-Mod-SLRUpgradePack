@@ -19,6 +19,9 @@ public class HeartOfGoldUpgrade : UpgradeBase<float> {
 
     private static void HeartOfGoldAction(EventData e) {
         var dict = (Dictionary<string, string>) e.CustomData;
+        if (!SLRUpgradePack.HeartOfGoldUpgradeInstance.GoldenHearts.ContainsKey(dict["player"])) {
+            SLRUpgradePack.HeartOfGoldUpgradeInstance.InitUpgrade(SemiFunc.PlayerAvatarGetFromSteamID(dict["player"]), 0);
+        }
         var heart = SLRUpgradePack.HeartOfGoldUpgradeInstance.GoldenHearts[dict["player"]];
         heart.SetViewId(int.Parse(dict["viewId"]));
     }

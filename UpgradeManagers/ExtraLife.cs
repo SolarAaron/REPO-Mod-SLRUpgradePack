@@ -18,6 +18,9 @@ public class ExtraLifeUpgrade : UpgradeBase<float> {
 
     private static void ExtraLifeAction(EventData e) {
         var dict = (Dictionary<string, string>) e.CustomData;
+        if (!SLRUpgradePack.ExtraLifeUpgradeInstance.ExtraLives.ContainsKey(dict["player"])) {
+            SLRUpgradePack.ExtraLifeUpgradeInstance.InitUpgrade(SemiFunc.PlayerAvatarGetFromSteamID(dict["player"]), 0);
+        }
         var extraLife = SLRUpgradePack.ExtraLifeUpgradeInstance.ExtraLives[dict["player"]];
         extraLife.SetViewId(int.Parse(dict["viewId"]));
     }
@@ -44,6 +47,7 @@ public class ExtraLifeUpgrade : UpgradeBase<float> {
 }
 
 public class ExtraLife : MonoBehaviour {
+    private static readonly FieldRef<PlayerHealth, int>? MaxHealthRef = FieldRefAccess<PlayerHealth, int>("maxHealth");
     public PlayerDeathHead playerHead { get; set; }
     public PlayerAvatar player { get; set; }
     private Coroutine? reviving;
@@ -79,17 +83,11 @@ public class ExtraLife : MonoBehaviour {
     private IEnumerator BeginReviving() {
         yield return new WaitForSecondsRealtime(1f);
         SLRUpgradePack.Logger.LogInfo($"Reviving {SemiFunc.PlayerGetName(player)}");
-        var extraLifeUpgrade = SLRUpgradePack.ExtraLifeUpgradeInstance;
-        var maxHealthRef = FieldRefAccess<PlayerHealth, int>("maxHealth");
 
         if (_inExtractionPointRef.Invoke(playerHead)) {
             reviving = null;
             yield break;
         }
-
-        _physGrabObjectRef.Invoke(playerHead).centerPoint = Vector3.zero;
-        player.Revive();
-        player.playerHealth.HealOther(Mathf.FloorToInt(maxHealthRef.Invoke(player.playerHealth) * extraLifeUpgrade.RevivePercent.Value / 100f), true);
 
         if (!SemiFunc.IsMultiplayer()) ReviveLogic();
         else photonView.RPC("ReviveLogic", RpcTarget.All);
@@ -100,6 +98,10 @@ public class ExtraLife : MonoBehaviour {
     [PunRPC]
     private void ReviveLogic() {
         var extraLifeUpgrade = SLRUpgradePack.ExtraLifeUpgradeInstance;
+        _physGrabObjectRef.Invoke(playerHead).centerPoint = Vector3.zero;
+        player.Revive(false);
+        player.playerHealth.HealOther(Mathf.FloorToInt(MaxHealthRef.Invoke(player.playerHealth) * (extraLifeUpgrade.RevivePercent.Value / 100f)), true);
+
         extraLifeUpgrade.UpgradeRegister.RemoveLevel(player);
     }
 

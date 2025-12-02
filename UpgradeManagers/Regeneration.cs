@@ -13,8 +13,6 @@ public class RegenerationComponent : MonoBehaviour {
     private readonly FieldRef<PlayerHealth, int> _healthRef = FieldRefAccess<PlayerHealth, int>("health");
 
     private void Update() {
-        if (SemiFunc.PlayerAvatarLocal() != player) return; // every man on their own
-
         var regenerationUpgrade = SLRUpgradePack.RegenerationUpgradeInstance;
 
         if (!ValuableDirector.instance.setupComplete) return;
@@ -39,7 +37,7 @@ public class RegenerationUpgrade : UpgradeBase<float> {
     public RegenerationUpgrade(bool enabled, float upgradeAmount, bool exponential, float exponentialAmount,
                                ConfigFile config, AssetBundle assetBundle, float baseHealing, float priceMultiplier) : base("Regeneration", "assets/repo/mods/resources/items/items/item upgrade regeneration lib.asset", enabled, upgradeAmount,
                                                                                                                             exponential, exponentialAmount, config, assetBundle, priceMultiplier, true, true, ((int?) null)) {
-        BaseHealing = config.Bind("Regeneration Upgrade", "Base Healing", baseHealing, new ConfigDescription("Base Healing Amount", new AcceptableValueRange<float>(0f, 10f)));
+        BaseHealing = config.Bind("Regeneration Upgrade", "Base Healing", baseHealing, new ConfigDescription("Base Healing Amount", new AcceptableValueRange<float>(0.1f, 10f)));
     }
 
     public override float Calculate(float value, PlayerAvatar player, int level) => DefaultCalculateFloatIncrease(this, "Regeneration", value, player, level);

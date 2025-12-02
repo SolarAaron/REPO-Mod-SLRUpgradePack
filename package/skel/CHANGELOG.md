@@ -1,7 +1,12 @@
+# v0.3.3b
+
+* Fixes for bugs reported
+
 # v0.3.0b
 
 * Fix for regeneration not working with guest players
 * Adds Inventory slot upgrade
+* Removed MoreUpgrades revivals as BULLETBOT returned
 
 # v0.2.1
 

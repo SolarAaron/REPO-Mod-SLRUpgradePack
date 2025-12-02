@@ -29,12 +29,12 @@ public class InventorySlotUpgrade : UpgradeBase<int> {
         base("Inventory Slot", "assets/repo/mods/resources/items/items/item upgrade inventory slot lib.asset", enabled, upgradeAmount, false, 0, config, assetBundle, priceMultiplier, false, false, 6) {
         var RegisterMethod = Method(typeof(Keybinds), "Register");
         var plugin = typeof(SLRUpgradePack).GetCustomAttribute<BepInPlugin>();
-        ItemSlot4 = (Keybind) RegisterMethod.Invoke(null, [plugin, "Item Slots", "Item Slot 4", "<keyboard>/z", null, false]);
-        ItemSlot5 = (Keybind) RegisterMethod.Invoke(null, [plugin, "Item Slots", "Item Slot 5", "<keyboard>/x", null, false]);
-        ItemSlot6 = (Keybind) RegisterMethod.Invoke(null, [plugin, "Item Slots", "Item Slot 6", "<keyboard>/c", null, false]);
-        ItemSlot7 = (Keybind) RegisterMethod.Invoke(null, [plugin, "Item Slots", "Item Slot 7", "<keyboard>/n", null, false]);
-        ItemSlot8 = (Keybind) RegisterMethod.Invoke(null, [plugin, "Item Slots", "Item Slot 8", "<keyboard>/m", null, false]);
-        ItemSlot9 = (Keybind) RegisterMethod.Invoke(null, [plugin, "Item Slots", "Item Slot 9", "<keyboard>/,", null, false]);
+        ItemSlot4 = Keybinds.Bind("Item slots", "Item Slot 4", "<keyboard>/z");
+        ItemSlot5 = Keybinds.Bind("Item Slots", "Item Slot 5", "<keyboard>/x");
+        ItemSlot6 = Keybinds.Bind("Item Slots", "Item Slot 6", "<keyboard>/c");
+        ItemSlot7 = Keybinds.Bind("Item Slots", "Item Slot 7", "<keyboard>/n");
+        ItemSlot8 = Keybinds.Bind("Item Slots", "Item Slot 8", "<keyboard>/m");
+        ItemSlot9 = Keybinds.Bind("Item Slots", "Item Slot 9", "<keyboard>/,");
     }
 
     public override int Calculate(int value, PlayerAvatar player, int level) {

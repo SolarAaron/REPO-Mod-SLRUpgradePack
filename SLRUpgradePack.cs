@@ -12,7 +12,7 @@ namespace SLRUpgradePack;
 
 [BepInDependency(MyPluginInfo.PLUGIN_GUID)]
 [BepInDependency("bulletbot.keybindlib")]
-[BepInPlugin("SolarAaron.SLRUpgradePack", "SLRUpgradePack", "0.3.1")]
+[BepInPlugin("SolarAaron.SLRUpgradePack", "SLRUpgradePack", "0.3.3")]
 public class SLRUpgradePack : BaseUnityPlugin {
     internal static SLRUpgradePack Instance { get; private set; } = null!;
     internal new static ManualLogSource Logger => Instance._logger;
@@ -49,13 +49,13 @@ public class SLRUpgradePack : BaseUnityPlugin {
         if (PhysGrabberPatch.Prepare())
             OverchargeUpgradeInstance = new OverchargeUpgrade(true, 0.1f, false, 1.1f, Config, assetBundle, 0.75f);
         ArmorUpgradeInstance = new ArmorUpgrade(true, 0.1f, false, 1.1f, Config, assetBundle, 1.0f);
-        ObjectValueUpgradeInstance = new ObjectValueUpgrade(true, 0.1f, false, 1.1f, Config, assetBundle, 1.5f);
-        ObjectDurabilityUpgradeInstance = new ObjectDurabilityUpgrade(true, 0.1f, false, 1.1f, Config, assetBundle, 1.5f);
-        ValuableDensityUpgradeInstance = new ValuableDensityUpgrade(true, 0.1f, false, 1.1f, Config, assetBundle, 1.5f);
-        HeartOfGoldUpgradeInstance = new HeartOfGoldUpgrade(true, 0.1f, false, 1.1f, Config, assetBundle, 10f, 2.5f);
-        RegenerationUpgradeInstance = new RegenerationUpgrade(true, 0.1f, false, 1.1f, Config, assetBundle, .1f, 1.5f);
-        ExtraLifeUpgradeInstance = new ExtraLifeUpgrade(true, 0.1f, false, 1.1f, Config, assetBundle, 5, 5f);
-        InventorySlotUpgradeInstance = new InventorySlotUpgrade(true, 1, Config, assetBundle, 3f);
+        ObjectValueUpgradeInstance = new ObjectValueUpgrade(true, 0.1f, false, 1.1f, Config, assetBundle, 2.5f);
+        ObjectDurabilityUpgradeInstance = new ObjectDurabilityUpgrade(true, 0.1f, false, 1.1f, Config, assetBundle, 2.5f);
+        ValuableDensityUpgradeInstance = new ValuableDensityUpgrade(true, 0.1f, false, 1.1f, Config, assetBundle, 2.5f);
+        HeartOfGoldUpgradeInstance = new HeartOfGoldUpgrade(true, 0.1f, false, 1.1f, Config, assetBundle, 10f, 3.5f);
+        RegenerationUpgradeInstance = new RegenerationUpgrade(true, 0.1f, false, 1.1f, Config, assetBundle, .1f, 4.5f);
+        ExtraLifeUpgradeInstance = new ExtraLifeUpgrade(true, 0.1f, false, 1.1f, Config, assetBundle, 5, 10f);
+        InventorySlotUpgradeInstance = new InventorySlotUpgrade(true, 1, Config, assetBundle, 2.0f);
 
         Patch();
         Logger.LogInfo($"{Info.Metadata.GUID} v{Info.Metadata.Version} has loaded!");
