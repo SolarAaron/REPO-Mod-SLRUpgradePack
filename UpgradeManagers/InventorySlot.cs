@@ -22,11 +22,13 @@ public class InventorySlotUpgrade : UpgradeBase<int> {
     public Keybind ItemSlot8 { get; set; }
     public Keybind ItemSlot9 { get; set; }
     internal string BoundPlayer { get; set; }
+    public Inventory InventoryRef { get; set; }
+    public InventoryUI UIRef { get; set; }
 
     public InventorySlotUpgrade(bool enabled, int upgradeAmount, ConfigFile config, AssetBundle assetBundle, float priceMultiplier) :
         base("Inventory Slot", "assets/repo/mods/resources/items/items/item upgrade inventory slot lib.asset", enabled, upgradeAmount, false, 0, config, assetBundle, priceMultiplier, false, false, 6) {
-        MethodInfo RegisterMethod = Method(typeof(Keybinds), "Register");
-        BepInPlugin plugin = typeof(SLRUpgradePack).GetCustomAttribute<BepInPlugin>();
+        var RegisterMethod = Method(typeof(Keybinds), "Register");
+        var plugin = typeof(SLRUpgradePack).GetCustomAttribute<BepInPlugin>();
         ItemSlot4 = (Keybind) RegisterMethod.Invoke(null, [plugin, "Item Slots", "Item Slot 4", "<keyboard>/z", null, false]);
         ItemSlot5 = (Keybind) RegisterMethod.Invoke(null, [plugin, "Item Slots", "Item Slot 5", "<keyboard>/x", null, false]);
         ItemSlot6 = (Keybind) RegisterMethod.Invoke(null, [plugin, "Item Slots", "Item Slot 6", "<keyboard>/c", null, false]);
@@ -45,32 +47,39 @@ public class InventorySlotUpgrade : UpgradeBase<int> {
             BoundPlayer = SemiFunc.PlayerGetSteamID(player);
         }
     }
+
+    internal override void UseUpgrade(PlayerAvatar player, int level) {
+        base.UseUpgrade(player, level);
+        InventoryStartPatch.Postfix(InventoryRef);
+        InventoryUIStartPatch.Postfix(UIRef);
+    }
 }
 
 [HarmonyPatch(typeof(InventoryUI), "Start")]
 public class InventoryUIStartPatch {
     private static FieldRef<InventoryUI, List<GameObject>> allChildren = FieldRefAccess<InventoryUI, List<GameObject>>("allChildren");
 
-    private static void Postfix(InventoryUI __instance) {
+    internal static void Postfix(InventoryUI __instance) {
         var inventorySlotUpgrade = SLRUpgradePack.InventorySlotUpgradeInstance;
+        inventorySlotUpgrade.UIRef = __instance;
         if (inventorySlotUpgrade.UpgradeEnabled.Value && inventorySlotUpgrade.BoundPlayer != null) {
             var slots = inventorySlotUpgrade.Calculate(3, SemiFunc.PlayerAvatarLocal(), inventorySlotUpgrade.UpgradeRegister.GetLevel(inventorySlotUpgrade.BoundPlayer));
 
             if (slots > 3) {
                 SLRUpgradePack.Logger.LogInfo($"Redrawing for {slots} slots");
-                float num = -(slots * 40) / 2f + 20f;
-                Transform child = __instance.transform.GetChild(0);
-                for (int j = 0; j < slots; j++) {
-                    if (j < 3) {
+                var num = -(slots * 40) / 2f + 20f;
+                var child = __instance.transform.GetChild(0);
+                for (var j = 0; j < slots; j++) {
+                    if (__instance.transform.Find($"Inventory Spot {j + 1}") != null) {
                         __instance.transform.Find($"Inventory Spot {j + 1}").localPosition = new Vector2(num + j * 40f, -175.3f);
                         continue;
                     }
-                    Transform val = Object.Instantiate(child, child.parent);
+                    var val = Object.Instantiate(child, child.parent);
                     val.name = $"Inventory Spot {j + 1}";
-                    InventorySpot component = val.GetComponent<InventorySpot>();
+                    var component = val.GetComponent<InventorySpot>();
                     component.inventorySpotIndex = j;
-                    TextMeshProUGUI component2 = val.Find("Numbers").GetComponent<TextMeshProUGUI>();
-                    string text2 = (component.noItem.text = (j + 1).ToString());
+                    var component2 = val.Find("Numbers").GetComponent<TextMeshProUGUI>();
+                    var text2 = (component.noItem.text = (j + 1).ToString());
                     component2.text = text2;
                     val.localPosition = new Vector2(num + j * 40f, -175.3f);
                     allChildren.Invoke(__instance).Add(val.gameObject);
@@ -86,8 +95,7 @@ public class StatsManagerUpdatePatch {
         if (!SemiFunc.IsMasterClientOrSingleplayer() || spot < 3) {
             return;
         }
-        Dictionary<int, int> value;
-        bool flag = InventorySlotUpgrade.serverMonitoredInventoryItems.TryGetValue(_steamID, out value);
+        var flag = InventorySlotUpgrade.serverMonitoredInventoryItems.TryGetValue(_steamID, out var value);
         if (string.IsNullOrEmpty(itemName)) {
             if (flag) {
                 value.Remove(spot);
@@ -115,13 +123,14 @@ public class MainMenuOpenStartPatch {
 public class InventoryStartPatch {
     private static FieldRef<Inventory, List<InventorySpot>> inventorySpots = FieldRefAccess<Inventory, List<InventorySpot>>("inventorySpots");
 
-    private static void Postfix(Inventory __instance) {
+    internal static void Postfix(Inventory __instance) {
         var inventorySlotUpgrade = SLRUpgradePack.InventorySlotUpgradeInstance;
+        inventorySlotUpgrade.InventoryRef = __instance;
         if (inventorySlotUpgrade.UpgradeEnabled.Value && inventorySlotUpgrade.BoundPlayer != null) {
-            var extraSlots = inventorySlotUpgrade.Calculate(0, SemiFunc.PlayerAvatarLocal(), inventorySlotUpgrade.UpgradeRegister.GetLevel(inventorySlotUpgrade.BoundPlayer));
+            var extraSlots = inventorySlotUpgrade.Calculate(3, SemiFunc.PlayerAvatarLocal(), inventorySlotUpgrade.UpgradeRegister.GetLevel(inventorySlotUpgrade.BoundPlayer));
 
-            SLRUpgradePack.Logger.LogInfo($"Player has {extraSlots} extra slots");
-            for (int index = 0; index < extraSlots; ++index)
+            SLRUpgradePack.Logger.LogInfo($"Player has {extraSlots} slots");
+            while (inventorySpots.Invoke(__instance).Count < extraSlots)
                 inventorySpots.Invoke(__instance).Add(null);
         }
     }
@@ -148,26 +157,26 @@ public class PunManagerSetItemNameLOGICPatch {
     private static bool Prefix(PunManager __instance, string name, int photonViewID, ItemAttributes _itemAttributes, StatsManager ___statsManager) {
         if (photonViewID == -1 && SemiFunc.IsMultiplayer())
             return true;
-        ItemAttributes itemAttributes = _itemAttributes;
+        var itemAttributes = _itemAttributes;
         if (SemiFunc.IsMultiplayer())
             itemAttributes = PhotonView.Find(photonViewID).GetComponent<ItemAttributes>();
         if ((Object) _itemAttributes == null && !SemiFunc.IsMultiplayer())
             return true;
         var instanceNameRef = FieldRefAccess<ItemAttributes, string>("instanceName");
         instanceNameRef.Invoke(itemAttributes) = name;
-        ItemBattery component1 = itemAttributes.GetComponent<ItemBattery>();
+        var component1 = itemAttributes.GetComponent<ItemBattery>();
         if (component1)
             component1.SetBatteryLife(___statsManager.itemStatBattery[name]);
-        ItemEquippable itemEquippable = itemAttributes.GetComponent<ItemEquippable>();
+        var itemEquippable = itemAttributes.GetComponent<ItemEquippable>();
         if (!itemEquippable)
             return true;
-        int hashCode = name.GetHashCode();
+        var hashCode = name.GetHashCode();
 
         if (!itemEquippable) {
             return true;
         }
 
-        foreach (PlayerAvatar item in SemiFunc.PlayerGetList()) {
+        foreach (var item in SemiFunc.PlayerGetList()) {
             if (InventorySlotUpgrade.serverMonitoredInventoryItems.TryGetValue(SemiFunc.PlayerGetSteamID(item), out var value) && value.ContainsValue(hashCode)) {
                 itemEquippable.RequestEquip(value.First(element => element.Value == hashCode).Key, SemiFunc.IsMultiplayer() ? item.photonView.ViewID : -1);
                 return false;

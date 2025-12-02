@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 638848917
+CRC: 2561169279
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 7351902f6c82e67efcaf9619bfbf36a6
+    Hash: 21e87c4875a57a2322d2c878d59e62f4
   TypeTreeHash:
     serializedVersion: 2
-    Hash: 71e866d9f044ba1c3a49e554c5d53806
+    Hash: c8ad696d3dc64ca52b87f5cda58e384b
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 7351902f6c82e67efcaf9619bfbf36a6
+    Hash: 21e87c4875a57a2322d2c878d59e62f4
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -45,6 +45,8 @@ ClassTypes:
 - Class: 114
   Script: {fileID: 11500000, guid: a8fc605d86e253c130d95b9eb74debf5, type: 3}
 - Class: 114
+  Script: {fileID: 11500000, guid: acedad1d9cb00d37656e7354b28c0b82, type: 3}
+- Class: 114
   Script: {fileID: 11500000, guid: 5ab8f401ece3e057ce511d64ce84d618, type: 3}
 - Class: 114
   Script: {fileID: 11500000, guid: 5fe79f55a9764e760e5c64281f543eb0, type: 3}
@@ -54,10 +56,6 @@ ClassTypes:
   Script: {fileID: 11500000, guid: ff1df5370f7af74f11d71ad866fd0a19, type: 3}
 - Class: 114
   Script: {fileID: 11500000, guid: a2e3fc4316c5898b5096a51406a41294, type: 3}
-- Class: 114
-  Script: {fileID: -1558716956, guid: c0b20f7094627da40b5164c5563cc3d9, type: 3}
-- Class: 114
-  Script: {fileID: 1072720772, guid: c0b20f7094627da40b5164c5563cc3d9, type: 3}
 - Class: 114
   Script: {fileID: 11500000, guid: 72bb657e63785f44f51afd88d9713a59, type: 3}
 - Class: 114
@@ -73,8 +71,6 @@ ClassTypes:
 - Class: 114
   Script: {fileID: 11500000, guid: a3c5831920c47b179b189f39981a1023, type: 3}
 - Class: 114
-  Script: {fileID: 11500000, guid: 34273b7af6b67c13e8b13e0904f11dca, type: 3}
-- Class: 114
   Script: {fileID: 11500000, guid: 1dc612d23e30bc425c249e877f0d02db, type: 3}
 - Class: 114
   Script: {fileID: 11500000, guid: 02942ab980045f4bc14fcfe6eb84b28f, type: 3}
@@ -88,6 +84,10 @@ ClassTypes:
   Script: {fileID: 11500000, guid: 328afba7744a086ddaa619a79c16685d, type: 3}
 - Class: 114
   Script: {fileID: 11500000, guid: c60312014fde116a7e06d1e78f69a71d, type: 3}
+- Class: 114
+  Script: {fileID: 1072720772, guid: c0b20f7094627da40b5164c5563cc3d9, type: 3}
+- Class: 114
+  Script: {fileID: -1558716956, guid: c0b20f7094627da40b5164c5563cc3d9, type: 3}
 - Class: 115
   Script: {instanceID: 0}
 - Class: 120
@@ -109,6 +109,8 @@ ClassTypes:
 - Class: 245
   Script: {instanceID: 0}
 SerializeReferenceClassIdentifiers:
+- AssemblyName: Assembly-CSharp
+  ClassName: PrefabRef
 - AssemblyName: Assembly-CSharp
   ClassName: Sound
 - AssemblyName: UnityEngine.CoreModule

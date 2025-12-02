@@ -12,12 +12,13 @@ namespace SLRUpgradePack;
 
 [BepInDependency(MyPluginInfo.PLUGIN_GUID)]
 [BepInDependency("bulletbot.keybindlib")]
-[BepInPlugin("SolarAaron.SLRUpgradePack", "SLRUpgradePack", "0.3.0b")]
+[BepInPlugin("SolarAaron.SLRUpgradePack", "SLRUpgradePack", "0.3.1")]
 public class SLRUpgradePack : BaseUnityPlugin {
     internal static SLRUpgradePack Instance { get; private set; } = null!;
     internal new static ManualLogSource Logger => Instance._logger;
     internal Harmony? Harmony { get; set; }
     private ManualLogSource _logger => base.Logger;
+    internal static readonly Dictionary<string, int> LimitedUse = new();
 
     public static OverchargeUpgrade OverchargeUpgradeInstance { get; private set; }
     public static ArmorUpgrade ArmorUpgradeInstance { get; private set; }

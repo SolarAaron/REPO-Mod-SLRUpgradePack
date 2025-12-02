@@ -208,7 +208,7 @@ public class ExtractionPointDestroyPatch {
         if (!SemiFunc.IsMasterClientOrSingleplayer() || !heartOfGoldUpgrade.UpgradeEnabled.Value)
             return true;
 
-        foreach (GameObject dollarHaul in RoundDirector.instance.dollarHaulList) {
+        foreach (var dollarHaul in RoundDirector.instance.dollarHaulList) {
             if (dollarHaul && dollarHaul.GetComponent<PhysGrabObject>()) {
                 _totalHaulRef.Invoke(RoundDirector.instance) += (int) Traverse
                                                                      .Create(dollarHaul.GetComponent<ValuableObject>())
@@ -226,7 +226,7 @@ public class ExtractionPointDestroyPatch {
             }
         }
 
-        foreach (PlayerAvatar player in GameDirector.instance.PlayerList) {
+        foreach (var player in GameDirector.instance.PlayerList) {
             player.playerDeathHead.Revive();
         }
 

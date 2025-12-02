@@ -13,16 +13,17 @@ MonoBehaviour:
   m_Name: Item Upgrade Extra Life
   m_EditorClassIdentifier: 
   disabled: 0
-  itemAssetName: Item Upgrade Extra Life
   itemName: Extra Life Upgrade
   description: 
   itemType: 3
   emojiIcon: 6
   itemVolume: 6
   itemSecretShopType: 0
-  colorPreset: {fileID: 11400000, guid: 2407d7dcde3d4a74a9518c5df4e7c40f, type: 2}
-  prefab: {fileID: 1080078809593336, guid: 1e966a14f6214924ab40848b12df8f66, type: 3}
-  value: {fileID: 11400000, guid: 680e5e2992649ed45885c7d70429ffa5, type: 2}
+  colorPreset: {fileID: 11400000, guid: 66c302a6d25a658468884a259e7d293d, type: 2}
+  prefab:
+    prefabName: 
+    resourcePath: 
+  value: {fileID: 11400000, guid: c3fe689c50b4db348b68d48cef3294d2, type: 2}
   maxAmount: 10
   maxAmountInShop: 2
   maxPurchase: 0

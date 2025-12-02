@@ -13,16 +13,17 @@ MonoBehaviour:
   m_Name: Item Upgrade Map Enemy Tracker
   m_EditorClassIdentifier: 
   disabled: 0
-  itemAssetName: Item Upgrade Map Enemy Tracker
   itemName: Map Enemy Tracker Upgrade
   description: 
   itemType: 3
   emojiIcon: 6
   itemVolume: 6
   itemSecretShopType: 0
-  colorPreset: {fileID: 11400000, guid: 2407d7dcde3d4a74a9518c5df4e7c40f, type: 2}
-  prefab: {fileID: 1080078809593336, guid: af24b7449b4c64841aa5205928ac540a, type: 3}
-  value: {fileID: 11400000, guid: 680e5e2992649ed45885c7d70429ffa5, type: 2}
+  colorPreset: {fileID: 11400000, guid: bf71b6adc422d3c4ab03a21830365aba, type: 2}
+  prefab:
+    prefabName: 
+    resourcePath: 
+  value: {fileID: 11400000, guid: c3fe689c50b4db348b68d48cef3294d2, type: 2}
   maxAmount: 10
   maxAmountInShop: 2
   maxPurchase: 1

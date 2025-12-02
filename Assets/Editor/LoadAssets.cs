@@ -1,3 +1,7 @@
+using System.Collections;
+using UnityEditor;
+using UnityEngine;
+
 public class DecryptAssetBundle : EditorWindow {
 
     private string assetURL = "";
@@ -38,7 +42,7 @@ public class DecryptAssetBundle : EditorWindow {
             return;
         }
         if (en == null) {
-            en = LoadAsset(assetUrl);
+            en = LoadAsset(assetURL);
         }
         if (! en.MoveNext())
             run=false;

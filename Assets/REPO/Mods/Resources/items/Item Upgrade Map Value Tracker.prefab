@@ -289,8 +289,8 @@ MonoBehaviour:
           m_BoolArgument: 0
         m_CallState: 2
   isPlayerUpgrade: 1
-  colorPreset: {fileID: 11400000, guid: 215d26c7cba67234e9fdfdf1a385688b, type: 2}
-  lineStartPoint: {fileID: 4762972069639019, guid: 7b0870a7cad567a40801e1b159c4b6d8, type: 3}
+  colorPreset: {fileID: 11400000, guid: 90c23a0e9a41a2047b7462217c6f22f6, type: 2}
+  lineStartPoint: {fileID: 4184636955664598, guid: f4e554503c9f3534f80cade09c10e46c, type: 3}
 --- !u!114 &-5711606064077588942
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -350,8 +350,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3e94dcf3314020481f880b97f02fc505, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  physAttributePreset: {fileID: 11400000, guid: 44f52be6ad124424dbd8cf383302df30, type: 2}
-  audioPreset: {fileID: 11400000, guid: 87cad983c0e0f764bacc2a65ba19d0f1, type: 2}
+  physAttributePreset: {fileID: 11400000, guid: 4ac87ea771ce80c4d9b3b3d959c15650, type: 2}
+  audioPreset: {fileID: 11400000, guid: c948a3521e7e73643b40e7a1df32d38b, type: 2}
   durabilityPreset: {fileID: 0}
   particleColors:
     serializedVersion: 2
@@ -489,6 +489,7 @@ MonoBehaviour:
   isCart: 0
   fragilityMultiplier: 1
   impactFragilityMultiplier: 1
+  centerPointNeedsToBeInsideCart: 0
 --- !u!114 &-2764290326615900135
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -501,7 +502,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c60312014fde116a7e06d1e78f69a71d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  lineBetweenTwoPoints: {fileID: 1586304588946153, guid: 5ee568bbcc992424da212374aaed333e, type: 3}
+  lineBetweenTwoPoints: {fileID: 1965940862678059, guid: f4e554503c9f3534f80cade09c10e46c, type: 3}
   hasSpheres: 1
   lineColor: {r: 0, g: 0.33720446, b: 1, a: 1}
 --- !u!114 &-2056516627093448833
@@ -674,6 +675,21 @@ MonoBehaviour:
   toggleState: 0
   playSound: 0
   autoTurnOffWhenEquipped: 1
+  onToggle:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: -4352475643225357995}
+        m_TargetAssemblyTypeName: ItemUpgrade, Assembly-CSharp
+        m_MethodName: PlayerUpgrade
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &6772139355762825263
 MonoBehaviour:
   m_ObjectHideFlags: 0

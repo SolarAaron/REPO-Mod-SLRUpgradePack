@@ -13,16 +13,17 @@ MonoBehaviour:
   m_Name: Item Upgrade Overcharge
   m_EditorClassIdentifier: 
   disabled: 0
-  itemAssetName: Item Upgrade Overcharge
   itemName: Overcharge Upgrade
   description: 
   itemType: 3
   emojiIcon: 11
   itemVolume: 6
   itemSecretShopType: 0
-  colorPreset: {fileID: 11400000, guid: 215d26c7cba67234e9fdfdf1a385688b, type: 2}
-  prefab: {fileID: 1080078809593336, guid: ab9f0d56f3b6e554385dcae17c134dbe, type: 3}
-  value: {fileID: 11400000, guid: 680e5e2992649ed45885c7d70429ffa5, type: 2}
+  colorPreset: {fileID: 11400000, guid: aa1b3ff02fe4dea4e8ff999443241870, type: 2}
+  prefab:
+    prefabName: 
+    resourcePath: 
+  value: {fileID: 11400000, guid: c3fe689c50b4db348b68d48cef3294d2, type: 2}
   maxAmount: 10
   maxAmountInShop: 2
   maxPurchase: 0
