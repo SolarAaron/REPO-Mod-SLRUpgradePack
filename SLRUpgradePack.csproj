@@ -17,6 +17,12 @@
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DebugSymbols>false</DebugSymbols>
   </PropertyGroup>
+  <PropertyGroup>
+    <RestoreAdditionalProjectSources>
+      https://api.nuget.org/v3/index.json; <!-- Official NuGet feed -->
+      https://nuget.bepinex.dev/v3/index.json; <!-- BepInEx NuGet feed -->
+    </RestoreAdditionalProjectSources>
+  </PropertyGroup>
 
   <!-- Package References -->
   <ItemGroup>
@@ -27,7 +33,7 @@
 
       <PackageReference Include="BepInEx.Core" Version="5.4.21" ExcludeAssets="runtime"/>
     <PackageReference Include="UnityEngine.Modules" Version="2022.3.21" IncludeAssets="compile" PrivateAssets="all"/>
-      <PackageReference Include="Zehs.REPOLib" Version="3.0.2"/>
+    <PackageReference Include="Zehs.REPOLib" Version="3.0.3"/>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="package\skel\plugins\" />

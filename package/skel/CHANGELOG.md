@@ -1,3 +1,9 @@
+# v0.3.4
+
+* Added box art for inventory slot upgrade
+* Network optimizations for upgrades that need to synchronize state
+* Added additional checks for inventory slots that have not been added to avoid log spam
+
 # v0.3.3b
 
 * Fixes for bugs reported
