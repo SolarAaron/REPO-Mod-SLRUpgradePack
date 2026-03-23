@@ -10,18 +10,18 @@ using Object = UnityEngine.Object;
 
 namespace SLRUpgradePack.UpgradeManagers;
 
-public class ObjectValueUpgrade : UpgradeBase<float>
-{
+public class ObjectValueUpgrade : UpgradeBase<float> {
     public ConfigEntry<bool> UpgradeScalesSurplus { get; protected set; }
+    public ConfigEntry<float> SurplusPercentScale { get; protected set; }
 
     public ObjectValueUpgrade(bool enabled, float upgradeAmount, bool exponential, float exponentialAmount,
         ConfigFile config, AssetBundle assetBundle, float priceMultiplier) :
         base("Object Value", "assets/repo/mods/resources/items/items/item upgrade value lib.asset", enabled,
             upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, true, true,
-            ((int?)null))
-    {
+            ((int?)null)) {
         UpgradeScalesSurplus = config.Bind("Object Value Upgrade", "Scale Surplus Bag", false,
             "Should the Object Value Upgrade scale the extraction surplus bag?");
+        SurplusPercentScale = config.Bind("Object Value Upgrade", "Surplus Scaled Percentage", 0.1f, "Percentage of the extraction surplus bag that is scaled by this upgrade");
     }
 
     public override float Calculate(float value, PlayerAvatar player, int level) =>
@@ -29,8 +29,7 @@ public class ObjectValueUpgrade : UpgradeBase<float>
 }
 
 [HarmonyPatch(typeof(ValuableObject), "DollarValueSetLogic")]
-public class ValuableObjectValuePatch
-{
+public class ValuableObjectValuePatch {
     internal static readonly FieldRef<ValuableObject, int> FixedValueRef =
         FieldRefAccess<ValuableObject, int>("dollarValueOverride");
 
@@ -40,16 +39,13 @@ public class ValuableObjectValuePatch
     internal static readonly Queue<ValuableObject> DollarValueQueue = new();
 
     [HarmonyPriority(Priority.First)]
-    internal static void Postfix(ValuableObject __instance)
-    {
+    internal static void Postfix(ValuableObject __instance) {
         var objectValueUpgrade = SLRUpgradePack.ObjectValueUpgradeInstance;
 
         if (__instance == null || SemiFunc.RunIsLobby() || SemiFunc.RunIsShop() || SemiFunc.RunIsArena()) return;
 
-        if (objectValueUpgrade.UpgradeEnabled.Value)
-        {
-            if (LevelGenerator.Instance.State <= LevelGenerator.LevelState.Valuable)
-            {
+        if (objectValueUpgrade.UpgradeEnabled.Value) {
+            if (LevelGenerator.Instance.State <= LevelGenerator.LevelState.Valuable) {
                 if (!DollarValueQueue.Contains(__instance))
                     DollarValueQueue.Enqueue(__instance);
                 return;
@@ -59,12 +55,10 @@ public class ValuableObjectValuePatch
         Action(__instance);
     }
 
-    internal static void Action(ValuableObject instance)
-    {
+    internal static void Action(ValuableObject instance) {
         var objectValueUpgrade = SLRUpgradePack.ObjectValueUpgradeInstance;
 
-        if (SemiFunc.IsMasterClientOrSingleplayer() && objectValueUpgrade.UpgradeEnabled.Value)
-        {
+        if (SemiFunc.IsMasterClientOrSingleplayer() && objectValueUpgrade.UpgradeEnabled.Value) {
             if (!objectValueUpgrade.UpgradeScalesSurplus.Value &&
                 instance.name.StartsWithIgnoreCaseFast("surplus")) return;
 
@@ -82,14 +76,12 @@ public class ValuableObjectValuePatch
             customValue.valueMax =
                 objectValueUpgrade.Calculate(instance.valuePreset.valueMax, null, totalLevels);
 
-            if (FixedValueRef.Invoke(instance) != 0)
-            {
+            if (FixedValueRef.Invoke(instance) != 0) {
                 FixedValueRef.Invoke(instance) =
                     (int)Math.Ceiling(objectValueUpgrade.Calculate(FixedValueRef.Invoke(instance), null, totalLevels));
             }
 
             finalValue = objectValueUpgrade.Calculate(finalValue, null, totalLevels);
-            //}
 
             instance.valuePreset = customValue;
             DollarValueCurrentRef.Invoke(instance) = finalValue;
@@ -102,14 +94,10 @@ public class ValuableObjectValuePatch
 }
 
 [HarmonyPatch(typeof(LevelGenerator), "Start")]
-public class LevelGeneratorObjectValueStartPatch
-{
-    internal static void Postfix(ValuableDirector __instance)
-    {
-        if (SemiFunc.RunIsLevel())
-        {
-            while (ValuableObjectValuePatch.DollarValueQueue.Count > 0)
-            {
+public class LevelGeneratorObjectValueStartPatch {
+    internal static void Postfix(ValuableDirector __instance) {
+        if (SemiFunc.RunIsLevel()) {
+            while (ValuableObjectValuePatch.DollarValueQueue.Count > 0) {
                 var valuable = ValuableObjectValuePatch.DollarValueQueue.Dequeue();
                 if (valuable)
                     ValuableObjectValuePatch.Action(valuable);
@@ -118,36 +106,50 @@ public class LevelGeneratorObjectValueStartPatch
     }
 }
 
-public class SpawnedValuableValuePatch<TSVT> where TSVT : MonoBehaviour
-{
-    protected static void DoValuableStuff(TSVT spawnedValuable)
-    {
+public class SpawnedValuableValuePatch<TSVT> where TSVT : MonoBehaviour {
+    protected static void DoValuableStuff(TSVT spawnedValuable) {
         if (spawnedValuable.TryGetComponent<ValuableObject>(out var valuableObject) &&
-            SLRUpgradePack.ObjectValueUpgradeInstance.UpgradeEnabled.Value)
-        {
+            SLRUpgradePack.ObjectValueUpgradeInstance.UpgradeEnabled.Value) {
             SLRUpgradePack.Logger.LogDebug(
-                $"Valuable spawned with: {valuableObject.valuePreset.valueMin} {valuableObject.valuePreset.valueMax} {ValuableObjectValuePatch.FixedValueRef.Invoke(valuableObject)}");
+                $"Valuable {spawnedValuable.name} spawned with: {valuableObject.valuePreset.valueMin} {valuableObject.valuePreset.valueMax} {ValuableObjectValuePatch.FixedValueRef.Invoke(valuableObject)}");
             ValuableObjectValuePatch.Action(valuableObject);
         }
     }
 }
 
 [HarmonyPatch(typeof(SurplusValuable), "Start")]
-public class SurplusValuableValuePatch : SpawnedValuableValuePatch<SurplusValuable>
-{
-    internal static void Prefix(SurplusValuable __instance)
-    {
-        if (SLRUpgradePack.ObjectValueUpgradeInstance.UpgradeScalesSurplus.Value &&
-            SLRUpgradePack.ObjectValueUpgradeInstance.UpgradeEnabled.Value)
+public class SurplusValuableValuePatch : SpawnedValuableValuePatch<SurplusValuable> {
+    internal static void Prefix(SurplusValuable __instance) {
+        var objectValueUpgradeInstance = SLRUpgradePack.ObjectValueUpgradeInstance;
+        if (objectValueUpgradeInstance.UpgradeScalesSurplus.Value &&
+            objectValueUpgradeInstance.UpgradeEnabled.Value && __instance.TryGetComponent<ValuableObject>(out var valuableObject)) {
+            var customValue = Object.Instantiate(valuableObject.valuePreset); // has original scaled value
+            var origMin = valuableObject.valuePreset.valueMin;
+            var origMax = valuableObject.valuePreset.valueMax;
+            var origFixed = ValuableObjectValuePatch.FixedValueRef.Invoke(valuableObject);
+            var origCurrent = ValuableObjectValuePatch.DollarValueCurrentRef.Invoke(valuableObject);
+
+            customValue.valueMin = origMin * objectValueUpgradeInstance.SurplusPercentScale.Value;
+            customValue.valueMax = origMax * objectValueUpgradeInstance.SurplusPercentScale.Value;
+            var origFixedScaled = ValuableObjectValuePatch.FixedValueRef.Invoke(valuableObject) = (int)(origFixed * objectValueUpgradeInstance.SurplusPercentScale.Value);
+            var origCurrentScaled = ValuableObjectValuePatch.DollarValueCurrentRef.Invoke(valuableObject) = origCurrent * objectValueUpgradeInstance.SurplusPercentScale.Value;
+            valuableObject.valuePreset = customValue;
+
             DoValuableStuff(__instance);
+
+            valuableObject.valuePreset.valueMin += (origMin - customValue.valueMin);
+            valuableObject.valuePreset.valueMax += (origMax - customValue.valueMax);
+            ValuableObjectValuePatch.FixedValueRef.Invoke(valuableObject) += (origFixed - origFixedScaled);
+            ValuableObjectValuePatch.DollarValueCurrentRef.Invoke(valuableObject) += (origCurrent - origCurrentScaled);
+
+            SLRUpgradePack.Logger.LogInfo($"Surplus bag worth {origCurrent} scaling {origCurrentScaled} to a total of {ValuableObjectValuePatch.DollarValueCurrentRef.Invoke(valuableObject)}");
+        }
     }
 }
 
 [HarmonyPatch(typeof(EnemyValuable), "Start")]
-public class EnemyValuableValuePatch : SpawnedValuableValuePatch<EnemyValuable>
-{
-    internal static void Prefix(EnemyValuable __instance)
-    {
+public class EnemyValuableValuePatch : SpawnedValuableValuePatch<EnemyValuable> {
+    internal static void Prefix(EnemyValuable __instance) {
         DoValuableStuff(__instance);
     }
 }

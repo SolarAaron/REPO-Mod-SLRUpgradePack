@@ -12,8 +12,7 @@ using static HarmonyLib.AccessTools;
 
 namespace SLRUpgradePack.UpgradeManagers;
 
-public abstract class UpgradeBase<T>
-{
+public abstract class UpgradeBase<T> {
     private string _name;
     private string _assetName;
     private AssetBundle _assetBundle;
@@ -28,8 +27,7 @@ public abstract class UpgradeBase<T>
 
     protected UpgradeBase(string name, string assetName, bool enabled, T upgradeAmount, bool exponential,
         T exponentialAmount, ConfigFile config, AssetBundle assetBundle, float priceMultiplier, bool configureAmount,
-        bool canBeExponential, int? maxLevel)
-    {
+        bool canBeExponential, int? maxLevel) {
         _name = name;
         _assetName = assetName;
         _assetBundle = assetBundle;
@@ -42,12 +40,10 @@ public abstract class UpgradeBase<T>
             new ConfigDescription($"How many levels of {_name} to start a game with",
                 new AcceptableValueRange<int>(0, maxLevel.GetValueOrDefault(100))));
 
-        if (configureAmount)
-        {
+        if (configureAmount) {
             UpgradeAmount = config.Bind($"{_name} Upgrade", $"{_name} Upgrade Power", upgradeAmount,
                 $"How much the {_name} Upgrade increments");
-            if (canBeExponential)
-            {
+            if (canBeExponential) {
                 UpgradeExponential = config.Bind($"{_name} Upgrade", "Exponential upgrade", exponential,
                     $"Should the {_name} Upgrade stack exponentially?");
                 UpgradeExpAmount = config.Bind($"{_name} Upgrade", $"{_name} Upgrade Exponential Power",
@@ -56,22 +52,19 @@ public abstract class UpgradeBase<T>
             }
         }
 
-        if (maxLevel.HasValue)
-        {
+        if (maxLevel.HasValue) {
             MaxLevel = config.Bind($"{_name} Upgrade", "Maximum Level", maxLevel.Value,
                 new ConfigDescription("Maximum level", new AcceptableValueRange<int>(0, maxLevel.Value)));
         }
 
-        if (UpgradeEnabled.Value)
-        {
+        if (UpgradeEnabled.Value) {
             RegisterUpgrade();
         }
 
         UpgradeEnabled.SettingChanged += UpgradeEnabledOnSettingChanged;
     }
 
-    private void RegisterUpgrade()
-    {
+    private void RegisterUpgrade() {
         var upgradeItem = _assetBundle.LoadAsset<ItemContent>(_assetName);
         SLRUpgradePack.Logger.LogInfo(
             $"Upgrade price range (default) {upgradeItem.Prefab.item.value.valueMin} - {upgradeItem.Prefab.item.value.valueMax}");
@@ -85,36 +78,28 @@ public abstract class UpgradeBase<T>
         UpgradeRegister = Upgrades.RegisterUpgrade(_name.Replace(" ", ""), upgradeItem.Prefab.item,
             InitUpgrade, UseUpgrade);
 
-        if (MaxLevel != null)
-        {
-            SLRUpgradePack.LimitedUse[itemRef.PrefabName] = MaxLevel.Value;
+        if (MaxLevel != null) {
+            SLRUpgradePack.LimitedUse[$"{_name} Upgrade"] = MaxLevel.Value;
             SLRUpgradePack.Logger.LogInfo(
-                $"{itemRef.PrefabName} is limited to {SLRUpgradePack.LimitedUse[itemRef.PrefabName]}");
+                $"{itemRef.PrefabName} is limited to {SLRUpgradePack.LimitedUse[$"{_name} Upgrade"]}");
         }
     }
 
-    private void UpgradeEnabledOnSettingChanged(object sender, EventArgs e)
-    {
-        if (UpgradeEnabled.Value)
-        {
-            if (UpgradeRegister == null)
-            {
+    private void UpgradeEnabledOnSettingChanged(object sender, EventArgs e) {
+        if (UpgradeEnabled.Value) {
+            if (UpgradeRegister == null) {
                 RegisterUpgrade();
             }
 
             UpgradeRegister.Item.disabled = false;
-        }
-        else
-        {
+        } else {
             if (UpgradeRegister != null) UpgradeRegister.Item.disabled = true;
         }
     }
 
-    internal virtual void InitUpgrade(PlayerAvatar player, int level)
-    {
+    internal virtual void InitUpgrade(PlayerAvatar player, int level) {
         GC.Collect(GC.MaxGeneration, GCCollectionMode.Optimized, false);
-        if (Traverse.Create(player).Field<bool>("isLocal").Value)
-        {
+        if (Traverse.Create(player).Field<bool>("isLocal").Value) {
             SLRUpgradePack.Logger
                 .LogInfo($"Init {_name}: {string.Join(",", UpgradeRegister.PlayerDictionary
                     .Where(kvp => SemiFunc.PlayerAvatarGetFromSteamID(kvp.Key) != null)
@@ -122,10 +107,8 @@ public abstract class UpgradeBase<T>
         }
     }
 
-    internal virtual void UseUpgrade(PlayerAvatar player, int level)
-    {
-        if (Traverse.Create(player).Field<bool>("isLocal").Value)
-        {
+    internal virtual void UseUpgrade(PlayerAvatar player, int level) {
+        if (Traverse.Create(player).Field<bool>("isLocal").Value) {
             SLRUpgradePack.Logger
                 .LogInfo($"Used {_name}: {string.Join(",", UpgradeRegister.PlayerDictionary
                     .Where(kvp => SemiFunc.PlayerAvatarGetFromSteamID(kvp.Key) != null)
@@ -136,8 +119,7 @@ public abstract class UpgradeBase<T>
     public abstract T Calculate(T value, PlayerAvatar player, int level);
 
     public static float DefaultCalculateFloatReduce(UpgradeBase<float> instance, string name, float value,
-        PlayerAvatar player, int level)
-    {
+        PlayerAvatar player, int level) {
         if (level > 0)
             if (instance.UpgradeExponential.Value)
                 return (float)(value / Math.Pow(instance.UpgradeExpAmount.Value, level));
@@ -146,8 +128,7 @@ public abstract class UpgradeBase<T>
     }
 
     public static float DefaultCalculateFloatIncrease(UpgradeBase<float> instance, string name, float value,
-        PlayerAvatar player, int level)
-    {
+        PlayerAvatar player, int level) {
         if (level > 0)
             if (instance.UpgradeExponential.Value)
                 return (float)(value * Math.Pow(instance.UpgradeExpAmount.Value, level));
@@ -155,37 +136,26 @@ public abstract class UpgradeBase<T>
         return value;
     }
 
-    protected GameObject GetVisualsFromComponent(Component component)
-    {
+    protected GameObject GetVisualsFromComponent(Component component) {
         GameObject visuals = null;
-        if (component.GetType() == typeof(EnemyParent))
-        {
+        if (component.GetType() == typeof(EnemyParent)) {
             var enemyParent = component as EnemyParent;
             var enemy = (Enemy)Field(typeof(EnemyParent), "Enemy").GetValue(component);
-            try
-            {
+            try {
                 visuals = enemyParent.EnableObject.gameObject.GetComponentInChildren<Animator>().gameObject;
             }
-            catch
-            {
-            }
+            catch { }
 
-            if (visuals == null)
-            {
-                try
-                {
+            if (visuals == null) {
+                try {
                     visuals = enemy.GetComponent<EnemyVision>().VisionTransform.gameObject;
                 }
-                catch
-                {
-                }
+                catch { }
             }
 
             if (visuals == null)
                 visuals = enemy.gameObject;
-        }
-        else if (component.GetType() == typeof(PlayerAvatar))
-        {
+        } else if (component.GetType() == typeof(PlayerAvatar)) {
             var playerAvatar = component as PlayerAvatar;
             visuals = playerAvatar.playerAvatarVisuals.gameObject;
         }
@@ -195,29 +165,24 @@ public abstract class UpgradeBase<T>
 }
 
 [Serializable]
-public class NetworkMessage
-{
+public class NetworkMessage {
     public string? PlayerId { get; set; } = null;
     public int? PhotonId { get; set; } = null;
 }
 
-public class EnumeratorWrapper : IEnumerable
-{
+public class EnumeratorWrapper : IEnumerable {
     public IEnumerator enumerator;
     public Action? prefixAction, postfixAction;
     public Action<object>? preItemAction, postItemAction;
     public Func<object, object>? itemAction;
 
-    IEnumerator IEnumerable.GetEnumerator()
-    {
+    IEnumerator IEnumerable.GetEnumerator() {
         return GetEnumerator();
     }
 
-    public IEnumerator GetEnumerator()
-    {
+    public IEnumerator GetEnumerator() {
         prefixAction?.Invoke();
-        while (enumerator.MoveNext())
-        {
+        while (enumerator.MoveNext()) {
             var item = enumerator.Current;
             preItemAction?.Invoke(item);
 
@@ -232,41 +197,33 @@ public class EnumeratorWrapper : IEnumerable
 }
 
 [HarmonyPatch(typeof(StatsManager), nameof(StatsManager.FetchPlayerUpgrades))]
-public class StatsManagerPatch
-{
-    private static bool Prefix(StatsManager __instance, ref string _steamID, ref Dictionary<string, int> __result)
-    {
+public class StatsManagerPatch {
+    private static bool Prefix(StatsManager __instance, ref string _steamID, ref Dictionary<string, int> __result) {
         var dictionary = new Dictionary<string, int>();
         var regex = new Regex("(?<!^)(?=[A-Z])");
         foreach (KeyValuePair<string, Dictionary<string, int>> dictionaryOfDictionary in __instance
-                     .dictionaryOfDictionaries)
-        {
+                     .dictionaryOfDictionaries) {
             if (!dictionaryOfDictionary.Key.StartsWith("playerUpgrade") ||
-                !dictionaryOfDictionary.Value.ContainsKey(_steamID))
-            {
+                !dictionaryOfDictionary.Value.ContainsKey(_steamID)) {
                 continue;
             }
 
             var text = "";
             string[] array = regex.Split(dictionaryOfDictionary.Key);
             var flag = false;
-            foreach (var text2 in array)
-            {
-                if (flag)
-                {
+            foreach (var text2 in array) {
+                if (flag) {
                     text = text + text2 + " ";
                 }
 
-                if (text2 == "Upgrade")
-                {
+                if (text2 == "Upgrade") {
                     flag = true;
                 }
             }
 
             text = text.Replace("Modded", "").Trim();
 
-            if (text.Length == 0)
-            {
+            if (text.Length == 0) {
                 //SLRUpgradePack.Logger.LogDebug($"Extra data in dictionary: {dictionaryOfDictionary.Key}: {dictionaryOfDictionary.Value[_steamID]}");
                 continue;
             }
@@ -287,8 +244,7 @@ public class StatsManagerPatch
 
 [HarmonyPatch(typeof(ItemUpgrade), "PlayerUpgrade")]
 [HarmonyPriority(Priority.First)]
-public class ItemUpgradePatch
-{
+public class ItemUpgradePatch {
     private static FieldRef<ItemUpgrade, ItemToggle>? _itemToggleRef =
         FieldRefAccess<ItemUpgrade, ItemToggle>("itemToggle");
 
@@ -298,13 +254,15 @@ public class ItemUpgradePatch
     private static FieldRef<ItemUpgrade, ItemAttributes>? _itemAttributesRef =
         FieldRefAccess<ItemUpgrade, ItemAttributes>("itemAttributes");
 
-    private static bool Prefix(ItemUpgrade __instance)
-    {
+    private static bool Prefix(ItemUpgrade __instance) {
         var user = SemiFunc.PlayerAvatarGetFromPhotonID(
             _playerTogglePhotonIdRef.Invoke(_itemToggleRef.Invoke(__instance)));
-        if (SLRUpgradePack.LimitedUse.TryGetValue(_itemAttributesRef.Invoke(__instance).item.itemName, out var value))
-        {
-            return SLRUpgradePack.InventorySlotUpgradeInstance.UpgradeRegister.GetLevel(user) < value;
+        var itemName = _itemAttributesRef.Invoke(__instance).item.itemName;
+        SLRUpgradePack.Logger.LogInfo($"Looking for {itemName} in {string.Join(",", SLRUpgradePack.LimitedUse)}");
+        if (SLRUpgradePack.LimitedUse.TryGetValue(itemName, out var value)) {
+            var userLevel = SLRUpgradePack.InventorySlotUpgradeInstance.UpgradeRegister.GetLevel(user);
+            SLRUpgradePack.Logger.LogInfo($"Checking for level limit for {SemiFunc.PlayerGetName(user)}:{itemName} => {userLevel} < {value}");
+            return userLevel < value;
         }
 
         return true;
@@ -312,22 +270,16 @@ public class ItemUpgradePatch
 }
 
 [HarmonyPatch(typeof(ShopManager), "GetAllItemsFromStatsManager")]
-public class ShopManagerSingleUsePatch
-{
-    private static void Prefix(ShopManager __instance)
-    {
-        foreach (var obj in StatsManager.instance.itemDictionary.Values)
-        {
-            SLRUpgradePack.Logger.LogInfo(JsonUtility.ToJson(obj));
-            if (SLRUpgradePack.LimitedUse.TryGetValue(obj.itemName, out var value))
-            {
+public class ShopManagerSingleUsePatch {
+    private static void Prefix(ShopManager __instance) {
+        foreach (var obj in StatsManager.instance.itemDictionary.Values) {
+            if (SLRUpgradePack.LimitedUse.TryGetValue(obj.itemName, out var value)) {
                 obj.maxPurchaseAmount = GameDirector.instance.PlayerList.Count * value;
             }
         }
     }
 
-    private static void Postfix(ShopManager __instance)
-    {
+    private static void Postfix(ShopManager __instance) {
         __instance.potentialItemUpgrades.RemoveAll(item => item.disabled);
     }
 }

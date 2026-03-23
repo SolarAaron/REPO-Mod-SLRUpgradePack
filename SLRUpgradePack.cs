@@ -12,9 +12,8 @@ namespace SLRUpgradePack;
 
 [BepInDependency(MyPluginInfo.PLUGIN_GUID)]
 [BepInDependency("bulletbot.keybindlib")]
-[BepInPlugin("SolarAaron.SLRUpgradePack", "SLRUpgradePack", "0.3.4")]
-public class SLRUpgradePack : BaseUnityPlugin
-{
+[BepInPlugin("SolarAaron.SLRUpgradePack", "SLRUpgradePack", "0.3.7")]
+public class SLRUpgradePack : BaseUnityPlugin {
     internal static SLRUpgradePack Instance { get; private set; } = null!;
     internal new static ManualLogSource Logger => Instance._logger;
     internal Harmony? Harmony { get; set; }
@@ -31,8 +30,7 @@ public class SLRUpgradePack : BaseUnityPlugin
     public static ExtraLifeUpgrade ExtraLifeUpgradeInstance { get; private set; }
     public static InventorySlotUpgrade InventorySlotUpgradeInstance { get; private set; }
 
-    private void Awake()
-    {
+    private void Awake() {
         Instance = this;
 
         // Prevent the plugin from being deleted
@@ -44,8 +42,7 @@ public class SLRUpgradePack : BaseUnityPlugin
         var assetBundle = AssetBundle.LoadFromMemory(Resources.slr_assets);
         assetBundle.name = "slr";
 
-        foreach (var assetName in assetBundle.GetAllAssetNames())
-        {
+        foreach (var assetName in assetBundle.GetAllAssetNames()) {
             _logger.LogInfo($"Found asset: {assetName}");
         }
 
@@ -65,19 +62,16 @@ public class SLRUpgradePack : BaseUnityPlugin
         Logger.LogInfo($"{Info.Metadata.GUID} v{Info.Metadata.Version} has loaded!");
     }
 
-    internal void Patch()
-    {
+    internal void Patch() {
         Harmony ??= new Harmony(Info.Metadata.GUID);
         Harmony.PatchAll();
     }
 
-    internal void Unpatch()
-    {
+    internal void Unpatch() {
         Harmony?.UnpatchSelf();
     }
 
-    private void Update()
-    {
+    private void Update() {
         if (!SemiFunc.IsMasterClientOrSingleplayer()) return;
         if (!LevelGenerator.Instance.Generated) return;
 
