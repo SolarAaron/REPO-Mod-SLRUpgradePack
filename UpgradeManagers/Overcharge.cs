@@ -49,13 +49,12 @@ public class PhysGrabberPatch {
     private static void LogicPostfix(PhysGrabber __instance, ref float __state,
         ref float ___physGrabBeamOverChargeFloat, ref byte ___physGrabBeamOverCharge) {
         if (__state > 0f && __state > ___physGrabBeamOverChargeFloat) {
-            SLRUpgradePack.Logger.LogInfo("Applying cooldown boost");
             var overchargeUpgrade = SLRUpgradePack.OverchargeUpgradeInstance;
             float original = 0.1f * Time.deltaTime;
-            float extra = overchargeUpgrade.Calculate(original, __instance.playerAvatar,
+            float extra = UpgradeBase<float>.DefaultCalculateFloatIncrease(overchargeUpgrade, "Overcharge", original, __instance.playerAvatar,
                 overchargeUpgrade.UpgradeRegister.GetLevel(__instance.playerAvatar)) - original;
             ___physGrabBeamOverChargeFloat = Math.Max(0, ___physGrabBeamOverChargeFloat - extra);
-            ___physGrabBeamOverCharge = (byte)((double)___physGrabBeamOverChargeFloat * 200.0);
+            ___physGrabBeamOverCharge = (byte)(___physGrabBeamOverChargeFloat * 200.0);
         }
     }
 }

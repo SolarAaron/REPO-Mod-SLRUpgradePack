@@ -1,7 +1,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Text.RegularExpressions;
 using BepInEx.Configuration;
 using HarmonyLib;
@@ -168,6 +170,20 @@ public abstract class UpgradeBase<T> {
 public class NetworkMessage {
     public string? PlayerId { get; set; } = null;
     public int? PhotonId { get; set; } = null;
+
+    public static byte[] ToByteArray(NetworkMessage msg) {
+        var formatter = new BinaryFormatter();
+        using var stream = new MemoryStream();
+
+        formatter.Serialize(stream, msg);
+        return stream.ToArray();
+    }
+
+    public static NetworkMessage FromByteArray(byte[] bytes) {
+        var formatter = new BinaryFormatter();
+        using var stream = new MemoryStream(bytes);
+        return (NetworkMessage)formatter.Deserialize(stream);
+    }
 }
 
 public class EnumeratorWrapper : IEnumerable {

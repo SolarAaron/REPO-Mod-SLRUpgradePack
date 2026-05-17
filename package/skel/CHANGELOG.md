@@ -1,3 +1,9 @@
+# v0.3.8
+
+* Regeneration init code based on BetterHeals
+* Extra Life init code based on BetterHeals
+* Overcharge cooldown boost calculated correctly
+
 # v0.3.7
 
 * Fixed check for maximum upgrade level

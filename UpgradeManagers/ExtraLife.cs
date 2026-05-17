@@ -17,7 +17,7 @@ public class ExtraLifeUpgrade : UpgradeBase<float> {
     public static NetworkedEvent ExtraLifeEvent = new NetworkedEvent("Extra Life", ExtraLifeAction);
 
     private static void ExtraLifeAction(EventData e) {
-        var data = (NetworkMessage)e.CustomData;
+        var data = NetworkMessage.FromByteArray((byte[])e.CustomData);
         var extraLifeUpgradeInstance = SLRUpgradePack.ExtraLifeUpgradeInstance;
         if (!extraLifeUpgradeInstance.ExtraLives.ContainsKey(data.PlayerId!)) {
             extraLifeUpgradeInstance.InitUpgrade(SemiFunc.PlayerAvatarGetFromSteamID(data.PlayerId),
@@ -39,17 +39,6 @@ public class ExtraLifeUpgrade : UpgradeBase<float> {
 
     public override float Calculate(float value, PlayerAvatar player, int level) =>
         DefaultCalculateFloatIncrease(this, "ExtraLife", value, player, level);
-
-    internal override void InitUpgrade(PlayerAvatar player, int level) {
-        base.InitUpgrade(player, level);
-
-        if (ExtraLives.TryGetValue(SemiFunc.PlayerGetSteamID(player), out var extraLife)) Object.Destroy(extraLife);
-
-        extraLife = new GameObject($"Extra Life: {SemiFunc.PlayerGetName(player)}").AddComponent<ExtraLife>();
-        extraLife.player = player;
-        extraLife.playerHead = player.playerDeathHead;
-        ExtraLives[SemiFunc.PlayerGetSteamID(player)] = extraLife;
-    }
 }
 
 public class ExtraLife : MonoBehaviour {
@@ -74,7 +63,7 @@ public class ExtraLife : MonoBehaviour {
             var eventContent = new NetworkMessage {
                 PlayerId = SemiFunc.PlayerGetSteamID(player), PhotonId = photonView.ViewID
             };
-            ExtraLifeUpgrade.ExtraLifeEvent.RaiseEvent(eventContent, NetworkingEvents.RaiseOthers,
+            ExtraLifeUpgrade.ExtraLifeEvent.RaiseEvent(NetworkMessage.ToByteArray(eventContent), NetworkingEvents.RaiseOthers,
                 SendOptions.SendReliable);
         }
 
@@ -83,23 +72,24 @@ public class ExtraLife : MonoBehaviour {
 
             if (!extraLifeUpgrade.UpgradeEnabled.Value) return;
 
-            if (_healthRef.Invoke(player.playerHealth) == 0 && extraLifeUpgrade.UpgradeRegister.GetLevel(player) > 0 &&
-                !_inExtractionPointRef.Invoke(playerHead) && reviving == null) {
+            if (_healthRef.Invoke(player.playerHealth) == 0 && extraLifeUpgrade.UpgradeRegister.GetLevel(player) > 0 && !_inExtractionPointRef.Invoke(playerHead) && reviving == null) {
                 reviving = StartCoroutine(BeginReviving());
             }
+
+            if (reviving != null && _healthRef.Invoke(player.playerHealth) > 0) reviving = null;
         } else {
-            SLRUpgradePack.Logger.LogInfo(
-                $"Extra Life: player {player.name} has no health object (disconnected?), self-destructing!");
+            SLRUpgradePack.Logger.LogInfo($"Extra Life: player {player.name} has no health object (disconnected?), self-destructing!");
             Destroy(this);
         }
     }
 
     private IEnumerator BeginReviving() {
-        yield return new WaitForSecondsRealtime(1f);
-        SLRUpgradePack.Logger.LogInfo($"Reviving {SemiFunc.PlayerGetName(player)}");
+        yield return new WaitForEndOfFrame();
+        SLRUpgradePack.Logger.LogInfo($"Preparing to revive {SemiFunc.PlayerGetName(player)}");
 
         if (_inExtractionPointRef.Invoke(playerHead)) {
             reviving = null;
+            SLRUpgradePack.Logger.LogInfo("Not reviving head in extraction point");
             yield break;
         }
 
@@ -113,12 +103,17 @@ public class ExtraLife : MonoBehaviour {
     private void ReviveLogic() {
         var extraLifeUpgrade = SLRUpgradePack.ExtraLifeUpgradeInstance;
         _physGrabObjectRef.Invoke(playerHead).centerPoint = Vector3.zero;
-        player.Revive(false);
-        player.playerHealth.HealOther(
+        try {
+            player.Revive(false);
+        }
+        catch { }
+
+        player.playerHealth.Heal(
             Mathf.FloorToInt(MaxHealthRef.Invoke(player.playerHealth) * (extraLifeUpgrade.RevivePercent.Value / 100f)),
             true);
 
-        extraLifeUpgrade.UpgradeRegister.RemoveLevel(player);
+        if (_healthRef.Invoke(player.playerHealth) > 0)
+            extraLifeUpgrade.UpgradeRegister.RemoveLevel(player);
     }
 
     private void Start() {
@@ -131,5 +126,23 @@ public class ExtraLife : MonoBehaviour {
     internal void SetViewId(int id) {
         photonView.ViewID = id;
         photonView.TransferOwnership(player.photonView.Owner);
+    }
+}
+
+[HarmonyPatch(typeof(LevelGenerator))]
+public class LevelGeneratorExtraLifePatch {
+    [HarmonyPatch("GenerateDone")]
+    [HarmonyPostfix]
+    private static void GenerateDonePostfix() {
+        var extraLifeUpgradeInstance = SLRUpgradePack.ExtraLifeUpgradeInstance;
+        var player = PlayerController.instance.playerAvatarScript;
+        if (player == null) return;
+        SLRUpgradePack.Logger.LogInfo($"Adding extra life component to {SemiFunc.PlayerGetName(player)} ({SemiFunc.PlayerGetSteamID(player)})");
+        if (extraLifeUpgradeInstance.ExtraLives.TryGetValue(SemiFunc.PlayerGetSteamID(player), out var extraLife) && extraLife != null) Object.Destroy(extraLife);
+
+        extraLife = player.gameObject.AddComponent<ExtraLife>();
+        extraLife.player = player;
+        extraLife.playerHead = player.playerDeathHead;
+        extraLifeUpgradeInstance.ExtraLives[SemiFunc.PlayerGetSteamID(player)] = extraLife;
     }
 }

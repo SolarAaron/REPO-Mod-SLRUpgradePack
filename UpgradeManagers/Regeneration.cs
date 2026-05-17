@@ -1,14 +1,43 @@
 using System;
+using System.Collections.Generic;
 using BepInEx.Configuration;
 using HarmonyLib;
 using UnityEngine;
 using static HarmonyLib.AccessTools;
+using Object = UnityEngine.Object;
 
 namespace SLRUpgradePack.UpgradeManagers;
 
+public class RegenerationComponent : MonoBehaviour {
+    internal PlayerAvatar player;
+    private float pendingHealing = 0;
+    private readonly FieldRef<PlayerHealth, int> _healthRef = FieldRefAccess<PlayerHealth, int>("health");
+
+    private void Start() {
+        SLRUpgradePack.Logger.LogInfo($"{SemiFunc.PlayerGetName(player)} is regenerating");
+    }
+
+    private void Update() {
+        var regenerationUpgrade = SLRUpgradePack.RegenerationUpgradeInstance;
+
+        if (!ValuableDirector.instance.setupComplete) return;
+
+        if (!regenerationUpgrade.UpgradeEnabled.Value || regenerationUpgrade.UpgradeRegister.GetLevel(player) == 0 || _healthRef.Invoke(player.playerHealth) == 0) return;
+
+        pendingHealing +=
+            regenerationUpgrade.Calculate(regenerationUpgrade.BaseHealing.Value * Time.deltaTime, player,
+                regenerationUpgrade.UpgradeRegister.GetLevel(player));
+
+        if (pendingHealing >= 1) {
+            player.playerHealth.Heal((int)Math.Floor(pendingHealing), false);
+            pendingHealing -= Mathf.Floor(pendingHealing);
+        }
+    }
+}
+
 public class RegenerationUpgrade : UpgradeBase<float> {
     public ConfigEntry<float> BaseHealing { get; protected set; }
-    internal string BoundPlayer { get; set; }
+    internal Dictionary<string, RegenerationComponent> Regenerations { get; set; } = new();
 
     public RegenerationUpgrade(bool enabled, float upgradeAmount, bool exponential, float exponentialAmount,
         ConfigFile config, AssetBundle assetBundle, float baseHealing, float priceMultiplier) : base("Regeneration", "assets/repo/mods/resources/items/items/item upgrade regeneration lib.asset", enabled, upgradeAmount,
@@ -17,38 +46,21 @@ public class RegenerationUpgrade : UpgradeBase<float> {
     }
 
     public override float Calculate(float value, PlayerAvatar player, int level) => DefaultCalculateFloatIncrease(this, "Regeneration", value, player, level);
-
-    internal override void InitUpgrade(PlayerAvatar player, int level) {
-        base.InitUpgrade(player, level);
-        if (player == SemiFunc.PlayerAvatarLocal()) {
-            BoundPlayer = SemiFunc.PlayerGetSteamID(player);
-            SLRUpgradePack.Logger.LogInfo($"{SemiFunc.PlayerGetName(player)} has regeneration level {level}");
-        }
-    }
 }
 
-[HarmonyPatch(typeof(PlayerHealth), "Update")]
-[HarmonyWrapSafe]
-public class PlayerHealthRecoveryPatch {
-    private static float pendingHealing = 0;
-    private static readonly FieldRef<PlayerHealth, int> _healthRef = FieldRefAccess<PlayerHealth, int>("health");
+[HarmonyPatch(typeof(LevelGenerator))]
+public class LevelGeneratorRegenerationPatch {
+    [HarmonyPatch("GenerateDone")]
+    [HarmonyPostfix]
+    private static void GenerateDonePostfix() {
+        var regenerationUpgradeInstance = SLRUpgradePack.RegenerationUpgradeInstance;
+        var player = PlayerController.instance.playerAvatarScript;
+        if (player == null) return;
+        SLRUpgradePack.Logger.LogInfo($"Adding regeneration component to {SemiFunc.PlayerGetName(player)} ({SemiFunc.PlayerGetSteamID(player)})");
+        if (regenerationUpgradeInstance.Regenerations.TryGetValue(SemiFunc.PlayerGetSteamID(player), out var regenerationComponent) && regenerationComponent != null) Object.Destroy(regenerationComponent);
 
-    private static void Postfix(PlayerHealth __instance, PlayerAvatar ___playerAvatar) {
-        var regenerationUpgrade = SLRUpgradePack.RegenerationUpgradeInstance;
-
-        if (!SemiFunc.PlayerGetSteamID(___playerAvatar).Equals(regenerationUpgrade.BoundPlayer)) return;
-
-        if (!ValuableDirector.instance.setupComplete) return;
-
-        if (!regenerationUpgrade.UpgradeEnabled.Value || regenerationUpgrade.UpgradeRegister.GetLevel(___playerAvatar) == 0 || _healthRef.Invoke(___playerAvatar.playerHealth) == 0) return;
-
-        pendingHealing +=
-            regenerationUpgrade.Calculate(regenerationUpgrade.BaseHealing.Value * Time.deltaTime, ___playerAvatar,
-                regenerationUpgrade.UpgradeRegister.GetLevel(___playerAvatar));
-
-        if (pendingHealing >= 1) {
-            ___playerAvatar.playerHealth.HealOther((int)Math.Floor(pendingHealing), false);
-            pendingHealing -= Mathf.Floor(pendingHealing);
-        }
+        regenerationComponent = player.gameObject.AddComponent<RegenerationComponent>();
+        regenerationComponent.player = player;
+        regenerationUpgradeInstance.Regenerations[SemiFunc.PlayerGetSteamID(player)] = regenerationComponent;
     }
 }

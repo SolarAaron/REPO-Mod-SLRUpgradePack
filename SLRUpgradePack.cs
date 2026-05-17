@@ -12,7 +12,7 @@ namespace SLRUpgradePack;
 
 [BepInDependency(MyPluginInfo.PLUGIN_GUID)]
 [BepInDependency("bulletbot.keybindlib")]
-[BepInPlugin("SolarAaron.SLRUpgradePack", "SLRUpgradePack", "0.3.7")]
+[BepInPlugin("SolarAaron.SLRUpgradePack", "SLRUpgradePack", "0.3.8")]
 public class SLRUpgradePack : BaseUnityPlugin {
     internal static SLRUpgradePack Instance { get; private set; } = null!;
     internal new static ManualLogSource Logger => Instance._logger;

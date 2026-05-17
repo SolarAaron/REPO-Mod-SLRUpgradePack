@@ -18,7 +18,7 @@ public class HeartOfGoldUpgrade : UpgradeBase<float> {
     public static NetworkedEvent HeartOfGoldEvent = new NetworkedEvent("Heart Of Gold", HeartOfGoldAction);
 
     private static void HeartOfGoldAction(EventData e) {
-        var data = (NetworkMessage)e.CustomData;
+        var data = NetworkMessage.FromByteArray((byte[])e.CustomData);
         var heartOfGoldUpgradeInstance = SLRUpgradePack.HeartOfGoldUpgradeInstance;
         if (!heartOfGoldUpgradeInstance.GoldenHearts.ContainsKey(data.PlayerId!)) {
             heartOfGoldUpgradeInstance.InitUpgrade(SemiFunc.PlayerAvatarGetFromSteamID(data.PlayerId!),
@@ -171,7 +171,7 @@ public class GoldenHeart : MonoBehaviour {
             var eventContent = new NetworkMessage {
                 PlayerId = SemiFunc.PlayerGetSteamID(player), PhotonId = photonView.ViewID
             };
-            HeartOfGoldUpgrade.HeartOfGoldEvent.RaiseEvent(eventContent, NetworkingEvents.RaiseOthers,
+            HeartOfGoldUpgrade.HeartOfGoldEvent.RaiseEvent(NetworkMessage.ToByteArray(eventContent), NetworkingEvents.RaiseOthers,
                 SendOptions.SendReliable);
         }
 
