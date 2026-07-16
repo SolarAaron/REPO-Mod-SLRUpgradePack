@@ -1,3 +1,13 @@
+# v0.4.3
+
+* Rewrote Extra Life and Regeneration upgrade logic sets; stable for single player, need testing on multiplayer
+* Pending rewrite of Inventory slot upgrade
+* Optimized access of private fields to avoid reflection cost on every frame
+
+# v0.4.1
+
+* Rebuilt for cosmetics update - NO FIXES
+
 # v0.3.8
 
 * Regeneration init code based on BetterHeals

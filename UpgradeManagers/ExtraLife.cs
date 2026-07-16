@@ -1,32 +1,28 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using BepInEx.Configuration;
-using ExitGames.Client.Photon;
-using HarmonyLib;
-using Photon.Pun;
-using REPOLib.Modules;
 using UnityEngine;
 using static HarmonyLib.AccessTools;
-using Object = UnityEngine.Object;
 
 namespace SLRUpgradePack.UpgradeManagers;
 
 public class ExtraLifeUpgrade : UpgradeBase<float> {
     public ConfigEntry<int> RevivePercent { get; protected set; }
-    internal Dictionary<string, ExtraLife> ExtraLives { get; set; } = new();
-    public static NetworkedEvent ExtraLifeEvent = new NetworkedEvent("Extra Life", ExtraLifeAction);
+    internal static Dictionary<string, PlayerAvatar> ExtraLifePlayers { get; } = new();
+    private readonly Dictionary<string, Coroutine?> _reviveCoroutines = new();
 
-    private static void ExtraLifeAction(EventData e) {
-        var data = NetworkMessage.FromByteArray((byte[])e.CustomData);
-        var extraLifeUpgradeInstance = SLRUpgradePack.ExtraLifeUpgradeInstance;
-        if (!extraLifeUpgradeInstance.ExtraLives.ContainsKey(data.PlayerId!)) {
-            extraLifeUpgradeInstance.InitUpgrade(SemiFunc.PlayerAvatarGetFromSteamID(data.PlayerId),
-                extraLifeUpgradeInstance.UpgradeRegister.GetLevel(SemiFunc.PlayerAvatarGetFromSteamID(data.PlayerId!)));
-        }
+    private static readonly FieldRef<PlayerHealth, int>? MaxHealthRef = FieldRefAccess<PlayerHealth, int>("maxHealth");
+    private readonly FieldRef<PlayerHealth, int> _healthRef = FieldRefAccess<PlayerHealth, int>("health");
 
-        var extraLife = extraLifeUpgradeInstance.ExtraLives[data.PlayerId!];
-        extraLife.SetViewId(data.PhotonId!.Value);
-    }
+    private readonly FieldRef<PlayerDeathHead, bool> _inExtractionPointRef =
+        FieldRefAccess<PlayerDeathHead, bool>("inExtractionPoint");
+
+    private readonly FieldRef<PlayerDeathHead, PhysGrabObject> _physGrabObjectRef =
+        FieldRefAccess<PlayerDeathHead, PhysGrabObject>("physGrabObject");
+
+    private static readonly FieldRef<PlayerAvatar, PlayerDeathHead> _playerDeathHeadRef = FieldRefAccess<PlayerAvatar, PlayerDeathHead>("playerDeathHead");
+    private static readonly FieldRef<RoundDirector, bool>? ExtractionPointsFetchedRef = FieldRefAccess<RoundDirector, bool>("extractionPointsFetched");
 
     public ExtraLifeUpgrade(bool enabled, float upgradeAmount, bool exponential, float exponentialAmount,
         ConfigFile config, AssetBundle assetBundle, int revivePercent, float priceMultiplier) :
@@ -39,110 +35,75 @@ public class ExtraLifeUpgrade : UpgradeBase<float> {
 
     public override float Calculate(float value, PlayerAvatar player, int level) =>
         DefaultCalculateFloatIncrease(this, "ExtraLife", value, player, level);
-}
 
-public class ExtraLife : MonoBehaviour {
-    private static readonly FieldRef<PlayerHealth, int>? MaxHealthRef = FieldRefAccess<PlayerHealth, int>("maxHealth");
-    public PlayerDeathHead playerHead { get; set; }
-    public PlayerAvatar player { get; set; }
-    private Coroutine? reviving;
-    private PhotonView photonView;
-    private FieldRef<PlayerHealth, int> _healthRef = FieldRefAccess<PlayerHealth, int>("health");
+    internal override void InitUpgrade(PlayerAvatar player, int level) {
+        base.InitUpgrade(player, level);
+        if (!SemiFunc.IsMasterClientOrSingleplayer()) return; // host handles all revivals
 
-    private FieldRef<PlayerDeathHead, bool> _inExtractionPointRef =
-        FieldRefAccess<PlayerDeathHead, bool>("inExtractionPoint");
+        var playerDeathHead = player.GetComponent<PlayerDeathHead>();
+        if (playerDeathHead == null) return;
 
-    private FieldRef<PlayerDeathHead, PhysGrabObject> _physGrabObjectRef =
-        FieldRefAccess<PlayerDeathHead, PhysGrabObject>("physGrabObject");
-
-    private void Update() {
-        if (player != SemiFunc.PlayerAvatarLocal()) return;
-        if (!Traverse.Create(RoundDirector.instance).Field("extractionPointsFetched").GetValue<bool>()) return;
-        if (SemiFunc.IsMultiplayer() && photonView.ViewID == 0) {
-            PhotonNetwork.AllocateViewID(photonView);
-            var eventContent = new NetworkMessage {
-                PlayerId = SemiFunc.PlayerGetSteamID(player), PhotonId = photonView.ViewID
-            };
-            ExtraLifeUpgrade.ExtraLifeEvent.RaiseEvent(NetworkMessage.ToByteArray(eventContent), NetworkingEvents.RaiseOthers,
-                SendOptions.SendReliable);
+        foreach (var missingPlayer in ExtraLifePlayers.Keys.Where(x => !UpgradeRegister.PlayerDictionary.ContainsKey(x)).ToList()) {
+            ExtraLifePlayers.Remove(missingPlayer);
         }
 
-        if (player.playerHealth) {
-            var extraLifeUpgrade = SLRUpgradePack.ExtraLifeUpgradeInstance;
+        ExtraLifePlayers[SemiFunc.PlayerGetSteamID(player)] = player;
 
-            if (!extraLifeUpgrade.UpgradeEnabled.Value) return;
+        if (!SLRUpgradePack.Instance.Actions.ContainsKey("Extra Life"))
+            SLRUpgradePack.Instance.Actions.Add("Extra Life", ExtraLifeUpdateAction);
+    }
 
-            if (_healthRef.Invoke(player.playerHealth) == 0 && extraLifeUpgrade.UpgradeRegister.GetLevel(player) > 0 && !_inExtractionPointRef.Invoke(playerHead) && reviving == null) {
-                reviving = StartCoroutine(BeginReviving());
+    private void ExtraLifeUpdateAction() {
+        foreach (var player in ExtraLifePlayers.Values) {
+            if (!ExtractionPointsFetchedRef.Invoke(RoundDirector.instance)) continue;
+            if (player.playerHealth) {
+                var playerID = SemiFunc.PlayerGetSteamID(player);
+                var playerHead = _playerDeathHeadRef(player);
+
+                if (!UpgradeEnabled.Value) continue;
+
+                var exists = _reviveCoroutines.TryGetValue(playerID, out var reviving);
+
+                if (_healthRef.Invoke(player.playerHealth) == 0 && UpgradeRegister.GetLevel(player) > 0 && !_inExtractionPointRef.Invoke(playerHead) && (!exists || reviving == null)) {
+                    reviving = SLRUpgradePack.Instance.StartCoroutine(BeginReviving(player));
+                }
+
+                if (reviving != null && _healthRef.Invoke(player.playerHealth) > 0) reviving = null;
             }
-
-            if (reviving != null && _healthRef.Invoke(player.playerHealth) > 0) reviving = null;
-        } else {
-            SLRUpgradePack.Logger.LogInfo($"Extra Life: player {player.name} has no health object (disconnected?), self-destructing!");
-            Destroy(this);
         }
     }
 
-    private IEnumerator BeginReviving() {
+    private IEnumerator BeginReviving(PlayerAvatar player) {
+        var playerHead = _playerDeathHeadRef(player);
+        var playerID = SemiFunc.PlayerGetSteamID(player);
         yield return new WaitForEndOfFrame();
         SLRUpgradePack.Logger.LogInfo($"Preparing to revive {SemiFunc.PlayerGetName(player)}");
 
         if (_inExtractionPointRef.Invoke(playerHead)) {
-            reviving = null;
+            _reviveCoroutines.Remove(playerID);
             SLRUpgradePack.Logger.LogInfo("Not reviving head in extraction point");
             yield break;
         }
 
-        if (!SemiFunc.IsMultiplayer()) ReviveLogic();
-        else photonView.RPC("ReviveLogic", RpcTarget.All);
+        ReviveLogic(player);
 
-        reviving = null;
+        _reviveCoroutines.Remove(playerID);
     }
 
-    [PunRPC]
-    private void ReviveLogic() {
+    private void ReviveLogic(PlayerAvatar player) {
         var extraLifeUpgrade = SLRUpgradePack.ExtraLifeUpgradeInstance;
+        var playerHead = _playerDeathHeadRef(player);
         _physGrabObjectRef.Invoke(playerHead).centerPoint = Vector3.zero;
         try {
             player.Revive(false);
         }
         catch { }
 
-        player.playerHealth.Heal(
+        player.playerHealth.HealOther(
             Mathf.FloorToInt(MaxHealthRef.Invoke(player.playerHealth) * (extraLifeUpgrade.RevivePercent.Value / 100f)),
             true);
 
         if (_healthRef.Invoke(player.playerHealth) > 0)
             extraLifeUpgrade.UpgradeRegister.RemoveLevel(player);
-    }
-
-    private void Start() {
-        SLRUpgradePack.Logger.LogInfo($"{SemiFunc.PlayerGetName(player)} has obtained extra lives");
-        if (!TryGetComponent<PhotonView>(out photonView)) {
-            photonView = gameObject.AddComponent<PhotonView>();
-        }
-    }
-
-    internal void SetViewId(int id) {
-        photonView.ViewID = id;
-        photonView.TransferOwnership(player.photonView.Owner);
-    }
-}
-
-[HarmonyPatch(typeof(LevelGenerator))]
-public class LevelGeneratorExtraLifePatch {
-    [HarmonyPatch("GenerateDone")]
-    [HarmonyPostfix]
-    private static void GenerateDonePostfix() {
-        var extraLifeUpgradeInstance = SLRUpgradePack.ExtraLifeUpgradeInstance;
-        var player = PlayerController.instance.playerAvatarScript;
-        if (player == null) return;
-        SLRUpgradePack.Logger.LogInfo($"Adding extra life component to {SemiFunc.PlayerGetName(player)} ({SemiFunc.PlayerGetSteamID(player)})");
-        if (extraLifeUpgradeInstance.ExtraLives.TryGetValue(SemiFunc.PlayerGetSteamID(player), out var extraLife) && extraLife != null) Object.Destroy(extraLife);
-
-        extraLife = player.gameObject.AddComponent<ExtraLife>();
-        extraLife.player = player;
-        extraLife.playerHead = player.playerDeathHead;
-        extraLifeUpgradeInstance.ExtraLives[SemiFunc.PlayerGetSteamID(player)] = extraLife;
     }
 }

@@ -59,7 +59,7 @@ public class InventorySlotUpgrade : UpgradeBase<int> {
 
 [HarmonyPatch(typeof(InventoryUI), "Start")]
 public class InventoryUIStartPatch {
-    private static FieldRef<InventoryUI, List<GameObject>> allChildren =
+    private static readonly FieldRef<InventoryUI, List<GameObject>> allChildren =
         FieldRefAccess<InventoryUI, List<GameObject>>("allChildren");
 
     internal static void Postfix(InventoryUI __instance) {
@@ -129,7 +129,7 @@ public class MainMenuOpenStartPatch {
 
 [HarmonyPatch(typeof(Inventory), "Start")]
 public class InventoryStartPatch {
-    private static FieldRef<Inventory, List<InventorySpot>> inventorySpots =
+    private static readonly FieldRef<Inventory, List<InventorySpot>> inventorySpots =
         FieldRefAccess<Inventory, List<InventorySpot>>("inventorySpots");
 
     internal static void Postfix(Inventory __instance) {
@@ -171,7 +171,7 @@ public class InventorySpotUpdatePatch {
 
 [HarmonyPatch(typeof(PunManager), "SetItemNameLOGIC")]
 public class PunManagerSetItemNameLOGICPatch {
-    private static bool Prefix(PunManager __instance, string name, int photonViewID, ItemAttributes _itemAttributes,
+    private static bool Prefix(PunManager __instance, string _name, int photonViewID, ItemAttributes _itemAttributes,
         StatsManager ___statsManager) {
         if (photonViewID == -1 && SemiFunc.IsMultiplayer())
             return true;
@@ -181,14 +181,14 @@ public class PunManagerSetItemNameLOGICPatch {
         if ((Object)_itemAttributes == null && !SemiFunc.IsMultiplayer())
             return true;
         var instanceNameRef = FieldRefAccess<ItemAttributes, string>("instanceName");
-        instanceNameRef.Invoke(itemAttributes) = name;
+        instanceNameRef.Invoke(itemAttributes) = _name;
         var component1 = itemAttributes.GetComponent<ItemBattery>();
         if (component1)
-            component1.SetBatteryLife(___statsManager.itemStatBattery[name]);
+            component1.SetBatteryLife(___statsManager.itemStatBattery[_name]);
         var itemEquippable = itemAttributes.GetComponent<ItemEquippable>();
         if (!itemEquippable)
             return true;
-        var hashCode = name.GetHashCode();
+        var hashCode = _name.GetHashCode();
 
         if (!itemEquippable) {
             return true;

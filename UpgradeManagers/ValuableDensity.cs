@@ -33,6 +33,7 @@ public class ValuableDensityUpgrade : UpgradeBase<float> {
 [HarmonyPatch(typeof(LevelGenerator), "Start")]
 public class LevelGeneratorPatch {
     private static bool initialized = false;
+    private static readonly FieldRef<ValuableDirector, int>? TotalMaxAmountRef = FieldRefAccess<ValuableDirector, int>("totalMaxAmount");
 
     private delegate float difficultyDelegate();
 
@@ -84,8 +85,6 @@ public class LevelGeneratorPatch {
                 SLRUpgradePack.Logger.LogInfo(log);
             }
 
-            var totalMaxAmountTraverse = Traverse.Create(ValuableDirector.instance).Field("totalMaxAmount");
-
             if (valuableDensityUpgrade.UpgradeRegister != null &&
                 valuableDensityUpgrade.UpgradeRegister.PlayerDictionary != null) {
                 var totalLevels = valuableDensityUpgrade.UpgradeRegister.PlayerDictionary
@@ -105,8 +104,8 @@ public class LevelGeneratorPatch {
                     }
                 } else {
                     SLRUpgradePack.Logger.LogInfo("Setting Max Amount");
-                    totalMaxAmountTraverse.SetValue((int)Math.Ceiling(
-                        valuableDensityUpgrade.Calculate(totalMaxAmountTraverse.GetValue<int>(), null, totalLevels)));
+                    TotalMaxAmountRef.Invoke(ValuableDirector.instance) = ((int)Math.Ceiling(
+                        valuableDensityUpgrade.Calculate(TotalMaxAmountRef.Invoke(ValuableDirector.instance), null, totalLevels)));
                 }
 
                 if (valuableDensityUpgrade.TotalMaxValueCurves.Count != 0) {
@@ -200,7 +199,7 @@ public class LevelGeneratorPatch {
                 }
             }
 
-            SLRUpgradePack.Logger.LogDebug($"Total max items: {totalMaxAmountTraverse.GetValue<int>()}");
+            SLRUpgradePack.Logger.LogDebug($"Total max items: {TotalMaxAmountRef.Invoke(ValuableDirector.instance)}");
         }
     }
 

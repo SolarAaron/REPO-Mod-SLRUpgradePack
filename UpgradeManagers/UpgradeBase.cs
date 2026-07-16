@@ -15,9 +15,10 @@ using static HarmonyLib.AccessTools;
 namespace SLRUpgradePack.UpgradeManagers;
 
 public abstract class UpgradeBase<T> {
-    private string _name;
-    private string _assetName;
-    private AssetBundle _assetBundle;
+    private static readonly FieldRef<PlayerAvatar, bool>? IsLocalRef = FieldRefAccess<PlayerAvatar, bool>("isLocal");
+    private readonly string _name;
+    private readonly string _assetName;
+    private readonly AssetBundle _assetBundle;
     public ConfigEntry<bool> UpgradeEnabled { get; protected set; }
     public ConfigEntry<T> UpgradeAmount { get; protected set; }
     public ConfigEntry<bool> UpgradeExponential { get; protected set; }
@@ -101,7 +102,7 @@ public abstract class UpgradeBase<T> {
 
     internal virtual void InitUpgrade(PlayerAvatar player, int level) {
         GC.Collect(GC.MaxGeneration, GCCollectionMode.Optimized, false);
-        if (Traverse.Create(player).Field<bool>("isLocal").Value) {
+        if (IsLocalRef.Invoke(player)) {
             SLRUpgradePack.Logger
                 .LogInfo($"Init {_name}: {string.Join(",", UpgradeRegister.PlayerDictionary
                     .Where(kvp => SemiFunc.PlayerAvatarGetFromSteamID(kvp.Key) != null)
@@ -110,7 +111,7 @@ public abstract class UpgradeBase<T> {
     }
 
     internal virtual void UseUpgrade(PlayerAvatar player, int level) {
-        if (Traverse.Create(player).Field<bool>("isLocal").Value) {
+        if (IsLocalRef.Invoke(player)) {
             SLRUpgradePack.Logger
                 .LogInfo($"Used {_name}: {string.Join(",", UpgradeRegister.PlayerDictionary
                     .Where(kvp => SemiFunc.PlayerAvatarGetFromSteamID(kvp.Key) != null)
@@ -214,11 +215,12 @@ public class EnumeratorWrapper : IEnumerable {
 
 [HarmonyPatch(typeof(StatsManager), nameof(StatsManager.FetchPlayerUpgrades))]
 public class StatsManagerPatch {
+    private static readonly FieldRef<StatsManager, SortedDictionary<string, Dictionary<string, int>>> _dictionaryOfDictionariesRef = FieldRefAccess<StatsManager, SortedDictionary<string, Dictionary<string, int>>>("dictionaryOfDictionaries");
+
     private static bool Prefix(StatsManager __instance, ref string _steamID, ref Dictionary<string, int> __result) {
         var dictionary = new Dictionary<string, int>();
         var regex = new Regex("(?<!^)(?=[A-Z])");
-        foreach (KeyValuePair<string, Dictionary<string, int>> dictionaryOfDictionary in __instance
-                     .dictionaryOfDictionaries) {
+        foreach (KeyValuePair<string, Dictionary<string, int>> dictionaryOfDictionary in _dictionaryOfDictionariesRef.Invoke(__instance)) {
             if (!dictionaryOfDictionary.Key.StartsWith("playerUpgrade") ||
                 !dictionaryOfDictionary.Value.ContainsKey(_steamID)) {
                 continue;
@@ -261,13 +263,13 @@ public class StatsManagerPatch {
 [HarmonyPatch(typeof(ItemUpgrade), "PlayerUpgrade")]
 [HarmonyPriority(Priority.First)]
 public class ItemUpgradePatch {
-    private static FieldRef<ItemUpgrade, ItemToggle>? _itemToggleRef =
+    private static readonly FieldRef<ItemUpgrade, ItemToggle>? _itemToggleRef =
         FieldRefAccess<ItemUpgrade, ItemToggle>("itemToggle");
 
-    private static FieldRef<ItemToggle, int>? _playerTogglePhotonIdRef =
+    private static readonly FieldRef<ItemToggle, int>? _playerTogglePhotonIdRef =
         FieldRefAccess<ItemToggle, int>("playerTogglePhotonID");
 
-    private static FieldRef<ItemUpgrade, ItemAttributes>? _itemAttributesRef =
+    private static readonly FieldRef<ItemUpgrade, ItemAttributes>? _itemAttributesRef =
         FieldRefAccess<ItemUpgrade, ItemAttributes>("itemAttributes");
 
     private static bool Prefix(ItemUpgrade __instance) {

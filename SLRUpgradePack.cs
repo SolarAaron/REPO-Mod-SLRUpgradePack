@@ -12,8 +12,9 @@ namespace SLRUpgradePack;
 
 [BepInDependency(MyPluginInfo.PLUGIN_GUID)]
 [BepInDependency("bulletbot.keybindlib")]
-[BepInPlugin("SolarAaron.SLRUpgradePack", "SLRUpgradePack", "0.3.8")]
+[BepInPlugin("SolarAaron.SLRUpgradePack", "SLRUpgradePack", "0.4.3")]
 public class SLRUpgradePack : BaseUnityPlugin {
+    internal Dictionary<string, Action> Actions { get; private set; } = new();
     internal static SLRUpgradePack Instance { get; private set; } = null!;
     internal new static ManualLogSource Logger => Instance._logger;
     internal Harmony? Harmony { get; set; }
@@ -76,6 +77,7 @@ public class SLRUpgradePack : BaseUnityPlugin {
         if (!LevelGenerator.Instance.Generated) return;
 
         var actions = new List<Action>();
+        actions.AddRange(Actions.Values);
 
         if (PhysGrabberPatch.Prepare() && OverchargeUpgradeInstance.UpgradeEnabled.Value)
             foreach (var pair in OverchargeUpgradeInstance.UpgradeRegister.PlayerDictionary)

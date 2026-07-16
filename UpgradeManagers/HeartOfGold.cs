@@ -63,6 +63,7 @@ public class GoldenHeart : MonoBehaviour {
 
     private PhotonView photonView;
     private readonly FieldRef<PlayerHealth, int> _healthRef = FieldRefAccess<PlayerHealth, int>("health");
+    private static readonly FieldRef<RoundDirector, bool>? ExtractionPointsFetchedRef = FieldRefAccess<RoundDirector, bool>("extractionPointsFetched");
 
     private readonly FieldRef<ValuableObject, PhysAttribute> _physAttributePresetRef =
         FieldRefAccess<ValuableObject, PhysAttribute>("physAttributePreset");
@@ -154,7 +155,7 @@ public class GoldenHeart : MonoBehaviour {
 
     private void Update() {
         if (SemiFunc.PlayerAvatarLocal() != player) return;
-        if (!Traverse.Create(RoundDirector.instance).Field("extractionPointsFetched").GetValue<bool>()) return;
+        if (!ExtractionPointsFetchedRef.Invoke(RoundDirector.instance)) return;
 
         var heartOfGoldUpgrade = SLRUpgradePack.HeartOfGoldUpgradeInstance;
 
@@ -219,7 +220,9 @@ public class GoldenHeart : MonoBehaviour {
 
 [HarmonyPatch(typeof(ExtractionPoint))]
 public class ExtractionPointDestroyPatch {
-    private static FieldRef<RoundDirector, int>? _totalHaulRef = FieldRefAccess<RoundDirector, int>("totalHaul");
+    private static readonly FieldRef<RoundDirector, int>? TotalHaulRef = FieldRefAccess<RoundDirector, int>("totalHaul");
+    private static readonly FieldRef<PlayerAvatar, PlayerDeathHead> PlayerDeathHeadRef = FieldRefAccess<PlayerAvatar, PlayerDeathHead>("playerDeathHead");
+    private static readonly FieldRef<ValuableObject, float>? DollarValueCurrentRef = FieldRefAccess<ValuableObject, float>("dollarValueCurrent");
 
     [HarmonyPatch("DestroyAllPhysObjectsInHaulList")]
     [HarmonyPrefix]
@@ -230,9 +233,7 @@ public class ExtractionPointDestroyPatch {
 
         foreach (var dollarHaul in RoundDirector.instance.dollarHaulList) {
             if (dollarHaul && dollarHaul.GetComponent<PhysGrabObject>()) {
-                _totalHaulRef.Invoke(RoundDirector.instance) += (int)Traverse
-                    .Create(dollarHaul.GetComponent<ValuableObject>())
-                    .Field("dollarValueCurrent").GetValue<float>();
+                TotalHaulRef.Invoke(RoundDirector.instance) += (int)DollarValueCurrentRef.Invoke(dollarHaul.GetComponent<ValuableObject>());
 
                 if (dollarHaul.TryGetComponent<ValuableObject>(out var valuableObject) &&
                     valuableObject.name.Equals("Health Grab")) {
@@ -249,7 +250,7 @@ public class ExtractionPointDestroyPatch {
         }
 
         foreach (var player in GameDirector.instance.PlayerList) {
-            player.playerDeathHead.Revive();
+            PlayerDeathHeadRef.Invoke(player).Revive();
         }
 
         foreach (var idHeart in heartOfGoldUpgrade.GoldenHearts) {
@@ -270,10 +271,7 @@ public class ExtractionPointDestroyPatch {
             !heartOfGoldUpgrade.UpgradeEnabled.Value)
             return true;
 
-        _totalHaulRef.Invoke(RoundDirector.instance) += (int)Traverse
-            .Create(RoundDirector.instance.dollarHaulList[0]
-                .GetComponent<ValuableObject>())
-            .Field("dollarValueCurrent").GetValue<float>();
+        TotalHaulRef.Invoke(RoundDirector.instance) += (int)DollarValueCurrentRef.Invoke(RoundDirector.instance.dollarHaulList[0].GetComponent<ValuableObject>());
 
         if (RoundDirector.instance.dollarHaulList[0].TryGetComponent<ValuableObject>(out var valuableObject) &&
             valuableObject.name.Equals("Health Grab")) {
