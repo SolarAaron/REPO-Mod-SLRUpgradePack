@@ -4,22 +4,30 @@ using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
 using REPOLib;
+using REPOLib.Modules;
 using SLRUpgradePack.UpgradeManagers;
 using UnityEngine;
+using static HarmonyLib.AccessTools;
 using Resources = SLRUpgradePack.Properties.Resources;
 
 namespace SLRUpgradePack;
 
 [BepInDependency(MyPluginInfo.PLUGIN_GUID)]
 [BepInDependency("bulletbot.keybindlib")]
-[BepInPlugin("SolarAaron.SLRUpgradePack", "SLRUpgradePack", "0.4.3")]
+[BepInPlugin("SolarAaron.SLRUpgradePack", "SLRUpgradePack", "0.5.1")]
 public class SLRUpgradePack : BaseUnityPlugin {
+    private static readonly FieldRef<PlayerUpgrade, Action<PlayerAvatar, int>> PlayerUpgradeStartActionRef =
+        FieldRefAccess<PlayerUpgrade, Action<PlayerAvatar, int>>("StartAction");
+
     internal Dictionary<string, Action> Actions { get; private set; } = new();
     internal static SLRUpgradePack Instance { get; private set; } = null!;
     internal new static ManualLogSource Logger => Instance._logger;
     internal Harmony? Harmony { get; set; }
     private ManualLogSource _logger => base.Logger;
     internal static readonly Dictionary<string, int> LimitedUse = new();
+    private readonly HashSet<(string Upgrade, string SteamId)> _initializedStartingLevels = new();
+    private readonly Dictionary<(string Upgrade, string SteamId), int> _initializedStartActionLevels = new();
+    private readonly HashSet<string> _playersWithStartActions = new();
 
     public static OverchargeUpgrade OverchargeUpgradeInstance { get; private set; }
     public static ArmorUpgrade ArmorUpgradeInstance { get; private set; }
@@ -74,74 +82,162 @@ public class SLRUpgradePack : BaseUnityPlugin {
 
     private void Update() {
         if (!SemiFunc.IsMasterClientOrSingleplayer()) return;
-        if (!LevelGenerator.Instance.Generated) return;
+        if (!LevelGenerator.Instance || !LevelGenerator.Instance.Generated) return;
 
-        var actions = new List<Action>();
-        actions.AddRange(Actions.Values);
+        // Snapshot in case an action registers or removes another action while running.
+        foreach (var action in new List<Action>(Actions.Values))
+            action.Invoke();
+    }
 
-        if (PhysGrabberPatch.Prepare() && OverchargeUpgradeInstance.UpgradeEnabled.Value)
-            foreach (var pair in OverchargeUpgradeInstance.UpgradeRegister.PlayerDictionary)
-                if (pair.Value < OverchargeUpgradeInstance.StartingAmount.Value)
-                    actions.Add(() =>
-                        OverchargeUpgradeInstance.UpgradeRegister.SetLevel(pair.Key,
-                            OverchargeUpgradeInstance.StartingAmount.Value));
+    internal void InitializeStartingLevelsForPlayer(string steamId) {
+        if (!SemiFunc.IsMasterClientOrSingleplayer() || string.IsNullOrWhiteSpace(steamId)) return;
 
-        if (ArmorUpgradeInstance.UpgradeEnabled.Value)
-            foreach (var pair in ArmorUpgradeInstance.UpgradeRegister.PlayerDictionary)
-                if (pair.Value < ArmorUpgradeInstance.StartingAmount.Value)
-                    actions.Add(() =>
-                        ArmorUpgradeInstance.UpgradeRegister.SetLevel(pair.Key,
-                            ArmorUpgradeInstance.StartingAmount.Value));
+        if (PhysGrabberPatch.Prepare())
+            InitializeStartingLevel("Overcharge", OverchargeUpgradeInstance, steamId);
+        InitializeStartingLevel("Armor", ArmorUpgradeInstance, steamId);
+        InitializeStartingLevel("ObjectValue", ObjectValueUpgradeInstance, steamId);
+        InitializeStartingLevel("ObjectDurability", ObjectDurabilityUpgradeInstance, steamId);
+        InitializeStartingLevel("ValuableDensity", ValuableDensityUpgradeInstance, steamId);
+        InitializeStartingLevel("HeartOfGold", HeartOfGoldUpgradeInstance, steamId);
+        InitializeStartingLevel("Regeneration", RegenerationUpgradeInstance, steamId);
+        InitializeStartingLevel("ExtraLife", ExtraLifeUpgradeInstance, steamId);
+        InitializeStartingLevel("InventorySlot", InventorySlotUpgradeInstance, steamId);
+    }
 
-        if (ObjectValueUpgradeInstance.UpgradeEnabled.Value)
-            foreach (var pair in ObjectValueUpgradeInstance.UpgradeRegister.PlayerDictionary)
-                if (pair.Value < ObjectValueUpgradeInstance.StartingAmount.Value)
-                    actions.Add(() =>
-                        ObjectValueUpgradeInstance.UpgradeRegister.SetLevel(pair.Key,
-                            ObjectValueUpgradeInstance.StartingAmount.Value));
+    internal void InitializeStartingLevelsForActivePlayers() {
+        if (!SemiFunc.IsMasterClientOrSingleplayer()) return;
 
-        if (ObjectDurabilityUpgradeInstance.UpgradeEnabled.Value)
-            foreach (var pair in ObjectDurabilityUpgradeInstance.UpgradeRegister.PlayerDictionary)
-                if (pair.Value < ObjectDurabilityUpgradeInstance.StartingAmount.Value)
-                    actions.Add(() =>
-                        ObjectDurabilityUpgradeInstance.UpgradeRegister.SetLevel(pair.Key,
-                            ObjectDurabilityUpgradeInstance.StartingAmount.Value));
+        foreach (var player in FindObjectsOfType<PlayerAvatar>()) {
+            if (!player) continue;
+            InitializeStartingLevelsForPlayer(SemiFunc.PlayerGetSteamID(player));
+        }
+    }
 
-        if (ValuableDensityUpgradeInstance.UpgradeEnabled.Value)
-            foreach (var pair in ValuableDensityUpgradeInstance.UpgradeRegister.PlayerDictionary)
-                if (pair.Value < ValuableDensityUpgradeInstance.StartingAmount.Value)
-                    actions.Add(() =>
-                        ValuableDensityUpgradeInstance.UpgradeRegister.SetLevel(pair.Key,
-                            ValuableDensityUpgradeInstance.StartingAmount.Value));
+    private void InitializeStartingLevel<T>(string upgradeName, UpgradeBase<T> upgrade, string steamId) {
+        if (upgrade == null || !upgrade.UpgradeEnabled.Value || upgrade.UpgradeRegister == null) return;
+        var startingLevel = upgrade.StartingAmount.Value;
+        if (startingLevel <= 0) return;
 
-        if (HeartOfGoldUpgradeInstance.UpgradeEnabled.Value)
-            foreach (var pair in HeartOfGoldUpgradeInstance.UpgradeRegister.PlayerDictionary)
-                if (pair.Value < HeartOfGoldUpgradeInstance.StartingAmount.Value)
-                    actions.Add(() =>
-                        HeartOfGoldUpgradeInstance.UpgradeRegister.SetLevel(pair.Key,
-                            HeartOfGoldUpgradeInstance.StartingAmount.Value));
+        var key = (upgradeName, steamId);
+        if (!_initializedStartingLevels.Add(key)) return;
 
-        if (RegenerationUpgradeInstance.UpgradeEnabled.Value)
-            foreach (var pair in RegenerationUpgradeInstance.UpgradeRegister.PlayerDictionary)
-                if (pair.Value < RegenerationUpgradeInstance.StartingAmount.Value)
-                    actions.Add(() =>
-                        RegenerationUpgradeInstance.UpgradeRegister.SetLevel(pair.Key,
-                            RegenerationUpgradeInstance.StartingAmount.Value));
+        try {
+            var currentLevel = upgrade.UpgradeRegister.GetLevel(steamId);
+            if (currentLevel >= startingLevel) return;
 
-        if (ExtraLifeUpgradeInstance.UpgradeEnabled.Value)
-            foreach (var pair in ExtraLifeUpgradeInstance.UpgradeRegister.PlayerDictionary)
-                if (pair.Value < ExtraLifeUpgradeInstance.StartingAmount.Value)
-                    actions.Add(() =>
-                        ExtraLifeUpgradeInstance.UpgradeRegister.SetLevel(pair.Key,
-                            ExtraLifeUpgradeInstance.StartingAmount.Value));
+            Logger.LogInfo(
+                $"Applying configured starting level for {upgradeName} to player {steamId}: {currentLevel} -> {startingLevel}");
+            // REPOLib's SetLevel updates the save dictionary, invokes the upgrade action, and
+            // broadcasts the authoritative level to remote clients.
+            upgrade.UpgradeRegister.SetLevel(steamId, startingLevel);
+        }
+        catch (Exception exception) {
+            // Permit a retry if registration/network state was not ready when the grant ran.
+            _initializedStartingLevels.Remove(key);
+            Logger.LogError($"Failed to initialize {upgradeName} for player {steamId}: {exception}");
+        }
+    }
 
-        if (InventorySlotUpgradeInstance.UpgradeEnabled.Value)
-            foreach (var pair in InventorySlotUpgradeInstance.UpgradeRegister.PlayerDictionary)
-                if (pair.Value < InventorySlotUpgradeInstance.StartingAmount.Value)
-                    actions.Add(() =>
-                        InventorySlotUpgradeInstance.UpgradeRegister.SetLevel(pair.Key,
-                            InventorySlotUpgradeInstance.StartingAmount.Value));
+    internal void RecordPlayerStartActions(string steamId) {
+        if (string.IsNullOrWhiteSpace(steamId)) return;
 
-        actions.ForEach(action => action.Invoke());
+        _playersWithStartActions.Add(steamId);
+        foreach (var upgrade in Upgrades.PlayerUpgrades) {
+            _initializedStartActionLevels[(upgrade.UpgradeId, steamId)] = upgrade.GetLevel(steamId);
+        }
+    }
+
+    internal void RepairRemotePlayerStartAction(PlayerUpgrade upgrade, string steamId, int level) {
+        if (SemiFunc.IsMasterClientOrSingleplayer() || string.IsNullOrWhiteSpace(steamId) ||
+            !_playersWithStartActions.Contains(steamId)) return;
+
+        var startingLevel = GetConfiguredStartingLevel(upgrade);
+        var startAction = PlayerUpgradeStartActionRef.Invoke(upgrade);
+        if (startingLevel <= 0 || level < startingLevel || startAction == null) return;
+
+        var key = (upgrade.UpgradeId, steamId);
+        if (_initializedStartActionLevels.TryGetValue(key, out var initializedLevel) &&
+            initializedLevel >= startingLevel) return;
+
+        var player = SemiFunc.PlayerAvatarGetFromSteamID(steamId);
+        if (!player) return;
+
+        try {
+            // The host's reliable level event can arrive after REPOLib has already invoked
+            // this client's start action at level 0. Re-run only that missed initialization
+            // with the synchronized level; the host remains the sole writer of upgrade state.
+            startAction(player, upgrade.GetLevel(steamId));
+            _initializedStartActionLevels[key] = upgrade.GetLevel(steamId);
+        }
+        catch (Exception exception) {
+            Logger.LogError($"Failed to initialize synchronized {upgrade.UpgradeId} for player {steamId}: {exception}");
+        }
+    }
+
+    private int GetConfiguredStartingLevel(PlayerUpgrade upgrade) {
+        if (OverchargeUpgradeInstance?.UpgradeRegister == upgrade) return OverchargeUpgradeInstance.StartingAmount.Value;
+        if (ArmorUpgradeInstance?.UpgradeRegister == upgrade) return ArmorUpgradeInstance.StartingAmount.Value;
+        if (ObjectValueUpgradeInstance?.UpgradeRegister == upgrade) return ObjectValueUpgradeInstance.StartingAmount.Value;
+        if (ObjectDurabilityUpgradeInstance?.UpgradeRegister == upgrade) return ObjectDurabilityUpgradeInstance.StartingAmount.Value;
+        if (ValuableDensityUpgradeInstance?.UpgradeRegister == upgrade) return ValuableDensityUpgradeInstance.StartingAmount.Value;
+        if (HeartOfGoldUpgradeInstance?.UpgradeRegister == upgrade) return HeartOfGoldUpgradeInstance.StartingAmount.Value;
+        if (RegenerationUpgradeInstance?.UpgradeRegister == upgrade) return RegenerationUpgradeInstance.StartingAmount.Value;
+        if (ExtraLifeUpgradeInstance?.UpgradeRegister == upgrade) return ExtraLifeUpgradeInstance.StartingAmount.Value;
+        if (InventorySlotUpgradeInstance?.UpgradeRegister == upgrade) return InventorySlotUpgradeInstance.StartingAmount.Value;
+        return 0;
+    }
+
+    internal void ResetStartingLevelInitialization() {
+        _initializedStartingLevels.Clear();
+        _initializedStartActionLevels.Clear();
+        _playersWithStartActions.Clear();
+    }
+}
+
+[HarmonyPatch(typeof(MenuPageSaves), "OnNewGame")]
+internal static class NewGameStartingUpgradeLevelsPatch {
+    private static void Prefix() {
+        SLRUpgradePack.Instance.ResetStartingLevelInitialization();
+    }
+}
+
+[HarmonyPatch(typeof(RunManager), nameof(RunManager.ResetProgress))]
+internal static class ResetRunStartingUpgradeLevelsPatch {
+    private static void Postfix() {
+        // Completing/failing an arena can reset StatsManager and begin another run without
+        // returning through MenuPageSaves.OnNewGame. Allow configured starting levels to be
+        // applied again when that run's LevelGenerator starts.
+        if (SLRUpgradePack.Instance != null)
+            SLRUpgradePack.Instance.ResetStartingLevelInitialization();
+    }
+}
+
+[HarmonyPatch(typeof(Upgrades), "InvokeStartActions")]
+internal static class InitializeStartingUpgradeLevelsPatch {
+    private static void Prefix(string steamId) {
+        if (SLRUpgradePack.Instance != null)
+            SLRUpgradePack.Instance.InitializeStartingLevelsForPlayer(steamId);
+    }
+
+    private static void Postfix(string steamId) {
+        if (SLRUpgradePack.Instance != null)
+            SLRUpgradePack.Instance.RecordPlayerStartActions(steamId);
+    }
+}
+
+[HarmonyPatch(typeof(PlayerUpgrade), "ApplyUpgrade")]
+internal static class RepairRemoteStartingUpgradeActionsPatch {
+    private static void Postfix(PlayerUpgrade __instance, string steamId, int level) {
+        if (SLRUpgradePack.Instance != null)
+            SLRUpgradePack.Instance.RepairRemotePlayerStartAction(__instance, steamId, level);
+    }
+}
+
+[HarmonyPatch(typeof(LevelGenerator), "Start")]
+internal static class LevelGeneratorStartingUpgradeLevelsPatch {
+    [HarmonyPriority(Priority.First)]
+    private static void Prefix() {
+        if (SLRUpgradePack.Instance != null)
+            SLRUpgradePack.Instance.InitializeStartingLevelsForActivePlayers();
     }
 }

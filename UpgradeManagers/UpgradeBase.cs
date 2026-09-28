@@ -104,22 +104,41 @@ public abstract class UpgradeBase<T> {
         GC.Collect(GC.MaxGeneration, GCCollectionMode.Optimized, false);
         if (IsLocalRef.Invoke(player)) {
             SLRUpgradePack.Logger
-                .LogInfo($"Init {_name}: {string.Join(",", UpgradeRegister.PlayerDictionary
-                    .Where(kvp => SemiFunc.PlayerAvatarGetFromSteamID(kvp.Key) != null)
-                    .Select(kvp => (SemiFunc.PlayerGetName(SemiFunc.PlayerAvatarGetFromSteamID(kvp.Key)), kvp.Value)))}");
+                .LogInfo($"Init {_name}: {string.Join(",", GetActivePlayerLevels()
+                    .Select(entry => (SemiFunc.PlayerGetName(entry.Player), entry.Level)))}");
         }
     }
 
     internal virtual void UseUpgrade(PlayerAvatar player, int level) {
         if (IsLocalRef.Invoke(player)) {
             SLRUpgradePack.Logger
-                .LogInfo($"Used {_name}: {string.Join(",", UpgradeRegister.PlayerDictionary
-                    .Where(kvp => SemiFunc.PlayerAvatarGetFromSteamID(kvp.Key) != null)
-                    .Select(kvp => (SemiFunc.PlayerGetName(SemiFunc.PlayerAvatarGetFromSteamID(kvp.Key)), kvp.Value)))}");
+                .LogInfo($"Used {_name}: {string.Join(",", GetActivePlayerLevels()
+                    .Select(entry => (SemiFunc.PlayerGetName(entry.Player), entry.Level)))}");
         }
     }
 
     public abstract T Calculate(T value, PlayerAvatar player, int level);
+
+    internal IEnumerable<(PlayerAvatar Player, int Level)> GetActivePlayerLevels() {
+        var upgradeRegister = UpgradeRegister;
+        if (upgradeRegister == null) yield break;
+
+        if (!SemiFunc.IsMultiplayer()) {
+            var localPlayer = SemiFunc.PlayerAvatarLocal();
+            if (localPlayer)
+                yield return (localPlayer, upgradeRegister.GetLevel(localPlayer));
+            yield break;
+        }
+
+        if (upgradeRegister.PlayerDictionary == null) yield break;
+        foreach (var playerLevel in upgradeRegister.PlayerDictionary) {
+            var activePlayer = SemiFunc.PlayerAvatarGetFromSteamID(playerLevel.Key);
+            if (activePlayer)
+                yield return (activePlayer, playerLevel.Value);
+        }
+    }
+
+    internal int GetTotalActivePlayerLevels() => GetActivePlayerLevels().Sum(entry => entry.Level);
 
     public static float DefaultCalculateFloatReduce(UpgradeBase<float> instance, string name, float value,
         PlayerAvatar player, int level) {
@@ -171,6 +190,7 @@ public abstract class UpgradeBase<T> {
 public class NetworkMessage {
     public string? PlayerId { get; set; } = null;
     public int? PhotonId { get; set; } = null;
+    public byte MessageType { get; set; }
 
     public static byte[] ToByteArray(NetworkMessage msg) {
         var formatter = new BinaryFormatter();

@@ -1,4 +1,4 @@
-using System.Linq;
+using System;
 using BepInEx.Configuration;
 using HarmonyLib;
 using UnityEngine;
@@ -12,61 +12,23 @@ public class ObjectDurabilityUpgrade : UpgradeBase<float> {
             upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, true, true,
             ((int?)null)) { }
 
-    public override float Calculate(float value, PlayerAvatar player, int level) =>
-        DefaultCalculateFloatIncrease(this, "ObjectDurability", value, player, level);
+    public override float Calculate(float damage, PlayerAvatar player, int level) =>
+        DefaultCalculateFloatReduce(this, "ObjectDurability", damage, player, level);
 }
 
-[HarmonyPatch(typeof(ValuableObject), "Start")]
-public class ValuableObjectDurabilityPatch {
-    [HarmonyPriority(Priority.Last)]
-    internal static void Prefix(ValuableObject __instance) {
+[HarmonyPatch(typeof(PhysGrabObjectImpactDetector), "Break")]
+public static class ObjectDurabilityDamagePatch {
+    internal static void Prefix(PhysGrabObjectImpactDetector __instance, ref float valueLost) {
         var objectDurabilityUpgrade = SLRUpgradePack.ObjectDurabilityUpgradeInstance;
-        if (SemiFunc.IsMasterClientOrSingleplayer() && objectDurabilityUpgrade.UpgradeEnabled.Value) {
-            SLRUpgradePack.Logger
-                .LogDebug($"Original durability: {__instance.durabilityPreset.durability}");
-            var customDurability = Durability.Instantiate(__instance.durabilityPreset);
+        if (!SemiFunc.IsMasterClientOrSingleplayer() || !__instance.isValuable || valueLost <= 0f ||
+            !objectDurabilityUpgrade.UpgradeEnabled.Value) return;
 
-            var totalLevels = objectDurabilityUpgrade.UpgradeRegister.PlayerDictionary
-                .Where(kvp => SemiFunc.PlayerAvatarGetFromSteamID(kvp.Key) != null)
-                .Select(kvp => kvp.Value)
-                .Sum();
-            customDurability.durability =
-                objectDurabilityUpgrade.Calculate(__instance.durabilityPreset.durability, null, totalLevels);
-            customDurability.fragility =
-                ObjectDurabilityUpgrade.DefaultCalculateFloatReduce(objectDurabilityUpgrade, "ObjectDurability",
-                    __instance.durabilityPreset.fragility, null, totalLevels);
+        var totalLevels = objectDurabilityUpgrade.GetTotalActivePlayerLevels();
+        if (totalLevels <= 0) return;
 
-            __instance.durabilityPreset = customDurability;
-
-            SLRUpgradePack.Logger.LogDebug(
-                $"After calculation with levels {string.Join(",", objectDurabilityUpgrade.UpgradeRegister.PlayerDictionary
-                    .Where(kvp => SemiFunc.PlayerAvatarGetFromSteamID(kvp.Key) != null)
-                    .Select(kvp => (SemiFunc.PlayerGetName(SemiFunc.PlayerAvatarGetFromSteamID(kvp.Key)), kvp.Value)))}: {__instance.durabilityPreset.durability}");
-        }
-    }
-}
-
-public class SpawnedValuableDurabilityPatch<TSVT> where TSVT : MonoBehaviour {
-    protected static void DoValuableStuff(TSVT spawnedValuable) {
-        if (spawnedValuable.TryGetComponent<ValuableObject>(out var valuableObject)) {
-            SLRUpgradePack.Logger.LogDebug(
-                $"Valuable spawned with: {valuableObject.durabilityPreset.durability} / {valuableObject.durabilityPreset.fragility}");
-
-            ValuableObjectDurabilityPatch.Prefix(valuableObject);
-        }
-    }
-}
-
-[HarmonyPatch(typeof(SurplusValuable), "Start")]
-public class SurplusValuableDurabilityValuePatch : SpawnedValuableDurabilityPatch<SurplusValuable> {
-    internal static void Prefix(SurplusValuable __instance) {
-        DoValuableStuff(__instance);
-    }
-}
-
-[HarmonyPatch(typeof(EnemyValuable), "Start")]
-public class EnemyValuableDurabilityValuePatch : SpawnedValuableDurabilityPatch<EnemyValuable> {
-    internal static void Prefix(EnemyValuable __instance) {
-        DoValuableStuff(__instance);
+        var reducedDamage = objectDurabilityUpgrade.Calculate(valueLost, null!, totalLevels);
+        // Invalid config values should not turn damage into healing, or increase damage.
+        if (!float.IsNaN(reducedDamage) && !float.IsInfinity(reducedDamage))
+            valueLost = Math.Min(valueLost, Math.Max(0f, reducedDamage));
     }
 }

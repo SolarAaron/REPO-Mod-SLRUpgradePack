@@ -1,3 +1,16 @@
+# v0.5.1
+
+* Implemented inventory slot battery displays
+* Fixed extra life reviving too eagerly
+
+# v0.5.0
+
+* Adjusted heart of gold handler to not clash with cosmetic valuables
+* Reimplemented inventory slot upgrade ui drawing
+* Attempted to fix regeneration synchronization again
+* Added extra checks for extra life revival
+* Overcharge cooldown boost recalculated
+
 # v0.4.3
 
 * Rewrote Extra Life and Regeneration upgrade logic sets; stable for single player, need testing on multiplayer

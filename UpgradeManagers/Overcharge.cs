@@ -25,15 +25,16 @@ public class PhysGrabberPatch {
 
     [HarmonyPatch("PhysGrabOverCharge")]
     [HarmonyPrefix]
-    private static void GrabOverchargePrefix(PhysGrabber __instance, ref float _amount) {
+    private static void GrabOverchargePrefix(PhysGrabber __instance, ref float _amount, ref float _multiplier) {
         var overchargeUpgrade = SLRUpgradePack.OverchargeUpgradeInstance;
         if (overchargeUpgrade.UpgradeEnabled.Value) {
+            var level = overchargeUpgrade.UpgradeRegister.GetLevel(__instance.playerAvatar);
             SLRUpgradePack.Logger.LogDebug($"Original overcharge amount: {_amount}");
-            _amount = overchargeUpgrade.Calculate(_amount, __instance.playerAvatar,
-                overchargeUpgrade.UpgradeRegister.GetLevel(__instance.playerAvatar));
+            _amount = overchargeUpgrade.Calculate(_amount, __instance.playerAvatar, level);
+            _multiplier = overchargeUpgrade.Calculate(_multiplier, __instance.playerAvatar, level);
             SLRUpgradePack.Logger
                 .LogDebug(
-                    $"After calculation with level {overchargeUpgrade.UpgradeRegister.GetLevel(__instance.playerAvatar)}: {_amount}");
+                    $"After calculation with level {level}: {_amount} (initial boost multiplier {_multiplier})");
         }
     }
 
@@ -56,5 +57,20 @@ public class PhysGrabberPatch {
             ___physGrabBeamOverChargeFloat = Math.Max(0, ___physGrabBeamOverChargeFloat - extra);
             ___physGrabBeamOverCharge = (byte)(___physGrabBeamOverChargeFloat * 200.0);
         }
+    }
+
+    [HarmonyPatch("OverrideGrabRelease")]
+    [HarmonyPrefix]
+    private static void GrabCooldownPrefix(PhysGrabber __instance, ref float _disableTimer) {
+        var overchargeUpgrade = SLRUpgradePack.OverchargeUpgradeInstance;
+        if (!overchargeUpgrade.UpgradeEnabled.Value || !__instance.playerAvatar || _disableTimer <= 0f) return;
+
+        var level = overchargeUpgrade.UpgradeRegister.GetLevel(__instance.playerAvatar);
+        if (level <= 0) return;
+
+        var reducedCooldown = overchargeUpgrade.Calculate(_disableTimer, __instance.playerAvatar, level);
+        // Keep malformed config values from lengthening the cooldown or making it negative.
+        if (!float.IsNaN(reducedCooldown) && !float.IsInfinity(reducedCooldown))
+            _disableTimer = Math.Min(_disableTimer, Math.Max(0f, reducedCooldown));
     }
 }

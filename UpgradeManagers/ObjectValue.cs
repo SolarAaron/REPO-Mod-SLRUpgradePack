@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
 using BepInEx.Configuration;
 using HarmonyLib;
 using UnityEngine;
@@ -30,13 +33,39 @@ public class ObjectValueUpgrade : UpgradeBase<float> {
 
 [HarmonyPatch(typeof(ValuableObject), "DollarValueSetLogic")]
 public class ValuableObjectValuePatch {
+    private sealed class ExtractionGoalValueData {
+        internal float BaseValue;
+        internal float UpgradeBonus;
+        internal bool HasBaseValue;
+        internal bool Excluded;
+    }
+
     internal static readonly FieldRef<ValuableObject, int> FixedValueRef =
         FieldRefAccess<ValuableObject, int>("dollarValueOverride");
 
     internal static readonly FieldRef<ValuableObject, float> DollarValueCurrentRef =
         FieldRefAccess<ValuableObject, float>("dollarValueCurrent");
+    private static readonly FieldRef<ValuableObject, bool> DollarValueSetRef =
+        FieldRefAccess<ValuableObject, bool>("dollarValueSet");
+
+    private static readonly ConditionalWeakTable<ValuableObject, ExtractionGoalValueData> ExtractionGoalValues = new();
+    private static readonly FieldInfo DollarValueCurrentField =
+        Field(typeof(ValuableObject), "dollarValueCurrent")!;
+    private static readonly FieldInfo RoundDirectorHaulGoalMaxField =
+        Field(typeof(RoundDirector), "haulGoalMax")!;
+    private static readonly MethodInfo GetExtractionGoalValueMethod =
+        Method(typeof(ValuableObjectValuePatch), nameof(GetExtractionGoalValue), [typeof(ValuableObject)])!;
 
     internal static readonly Queue<ValuableObject> DollarValueQueue = new();
+
+    [HarmonyPriority(Priority.First)]
+    internal static void Prefix(ValuableObject __instance) {
+        if (__instance && !DollarValueSetRef.Invoke(__instance) &&
+            ExtractionGoalValues.TryGetValue(__instance, out var goalValue)) {
+            goalValue.HasBaseValue = false;
+            goalValue.UpgradeBonus = 0f;
+        }
+    }
 
     [HarmonyPriority(Priority.First)]
     internal static void Postfix(ValuableObject __instance) {
@@ -56,6 +85,10 @@ public class ValuableObjectValuePatch {
     }
 
     internal static void Action(ValuableObject instance) {
+        if (!instance) return;
+
+        EnsureBaseExtractionGoalValue(instance, DollarValueCurrentRef.Invoke(instance));
+
         var objectValueUpgrade = SLRUpgradePack.ObjectValueUpgradeInstance;
 
         if (SemiFunc.IsMasterClientOrSingleplayer() && objectValueUpgrade.UpgradeEnabled.Value) {
@@ -67,10 +100,7 @@ public class ValuableObjectValuePatch {
             var customValue = Object.Instantiate(instance.valuePreset);
             var finalValue = DollarValueCurrentRef.Invoke(instance);
 
-            var totalLevels = objectValueUpgrade.UpgradeRegister.PlayerDictionary
-                .Where(kvp => SemiFunc.PlayerAvatarGetFromSteamID(kvp.Key) != null)
-                .Select(kvp => kvp.Value)
-                .Sum();
+            var totalLevels = objectValueUpgrade.GetTotalActivePlayerLevels();
             customValue.valueMin =
                 objectValueUpgrade.Calculate(instance.valuePreset.valueMin, null, totalLevels);
             customValue.valueMax =
@@ -85,17 +115,122 @@ public class ValuableObjectValuePatch {
 
             instance.valuePreset = customValue;
             DollarValueCurrentRef.Invoke(instance) = finalValue;
+            UpdateExtractionGoalBonusFromCurrent(instance);
             SLRUpgradePack.Logger.LogDebug(
-                $"After calculation with levels {string.Join(",", objectValueUpgrade.UpgradeRegister.PlayerDictionary
-                    .Where(kvp => SemiFunc.PlayerAvatarGetFromSteamID(kvp.Key) != null)
-                    .Select(kvp => (SemiFunc.PlayerGetName(SemiFunc.PlayerAvatarGetFromSteamID(kvp.Key)), kvp.Value)))}: {instance.valuePreset.valueMin} - {instance.valuePreset.valueMax} ({DollarValueCurrentRef.Invoke(instance)} / {FixedValueRef.Invoke(instance)})");
+                $"After calculation with levels {string.Join(",", objectValueUpgrade.GetActivePlayerLevels()
+                    .Select(entry => (SemiFunc.PlayerGetName(entry.Player), entry.Level)))}: {instance.valuePreset.valueMin} - {instance.valuePreset.valueMax} ({DollarValueCurrentRef.Invoke(instance)} / {FixedValueRef.Invoke(instance)})");
         }
     }
+
+    internal static void EnsureBaseExtractionGoalValue(ValuableObject instance, float value) {
+        if (!instance) return;
+
+        var goalValue = ExtractionGoalValues.GetValue(instance, _ => new ExtractionGoalValueData());
+        if (goalValue.HasBaseValue) return;
+
+        goalValue.BaseValue = value;
+        goalValue.HasBaseValue = true;
+    }
+
+    internal static void UpdateExtractionGoalBonusFromCurrent(ValuableObject instance) {
+        if (!instance || !ExtractionGoalValues.TryGetValue(instance, out var goalValue) || !goalValue.HasBaseValue)
+            return;
+
+        goalValue.UpgradeBonus = DollarValueCurrentRef.Invoke(instance) - goalValue.BaseValue;
+    }
+
+    internal static void MarkExcludedFromExtractionGoal(ValuableObject instance) {
+        if (!instance) return;
+
+        ExtractionGoalValues.GetValue(instance, _ => new ExtractionGoalValueData()).Excluded = true;
+    }
+
+    internal static float GetExtractionGoalValue(ValuableObject instance) {
+        if (!instance) return 0f;
+        if (!ExtractionGoalValues.TryGetValue(instance, out var goalValue))
+            return DollarValueCurrentRef.Invoke(instance);
+        if (goalValue.Excluded) return 0f;
+
+        var currentValue = DollarValueCurrentRef.Invoke(instance);
+        // Goal sizing uses the pre-upgrade value; live haul and extraction always use dollarValueCurrent.
+        return goalValue.HasBaseValue
+            ? Mathf.Max(0f, currentValue - goalValue.UpgradeBonus)
+            : currentValue;
+    }
+
+    internal static IEnumerable<CodeInstruction> ReplaceSpawnBudgetValueLoad(
+        IEnumerable<CodeInstruction> instructions) {
+        var replacements = 0;
+        var patchedInstructions = new List<CodeInstruction>();
+
+        foreach (var originalInstruction in instructions) {
+            var instruction = new CodeInstruction(originalInstruction);
+            if (instruction.LoadsField(DollarValueCurrentField)) {
+                instruction.opcode = OpCodes.Call;
+                instruction.operand = GetExtractionGoalValueMethod;
+                replacements++;
+            }
+
+            patchedInstructions.Add(instruction);
+        }
+
+        if (replacements != 1)
+            SLRUpgradePack.Logger.LogWarning(
+                $"Expected one valuable spawn-budget value read in ValuableDirector.SpawnValuable, replaced {replacements}.");
+
+        return patchedInstructions;
+    }
+
+    internal static IEnumerable<CodeInstruction> ReplaceExtractionGoalValueLoad(
+        IEnumerable<CodeInstruction> instructions) {
+        var replacements = 0;
+        var patchedInstructions = instructions.Select(instruction => new CodeInstruction(instruction)).ToList();
+
+        for (var i = 0; i < patchedInstructions.Count - 3; i++) {
+            var instruction = patchedInstructions[i];
+            if (!instruction.LoadsField(DollarValueCurrentField) ||
+                patchedInstructions[i + 1].opcode != OpCodes.Conv_I4 ||
+                patchedInstructions[i + 2].opcode != OpCodes.Add ||
+                !patchedInstructions[i + 3].StoresField(RoundDirectorHaulGoalMaxField))
+                continue;
+
+            instruction.opcode = OpCodes.Call;
+            instruction.operand = GetExtractionGoalValueMethod;
+            replacements++;
+        }
+
+        if (replacements != 1)
+            SLRUpgradePack.Logger.LogWarning(
+                $"Expected one value read when building RoundDirector.haulGoalMax, replaced {replacements}.");
+
+        return patchedInstructions;
+    }
+}
+
+[HarmonyPatch]
+public static class ValuableObjectExtractionGoalValuePatch {
+    private static MethodBase TargetMethod() {
+        var stateMachineType = Inner(typeof(ValuableObject), "<DollarValueSet>d__38");
+        return Method(stateMachineType!, "MoveNext")!;
+    }
+
+    // Ignore Object Value's bonus only when REPO accumulates the level's extraction goal.
+    [HarmonyTranspiler]
+    private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) =>
+        ValuableObjectValuePatch.ReplaceExtractionGoalValueLoad(instructions);
+}
+
+[HarmonyPatch(typeof(ValuableDirector), "SpawnValuable")]
+public static class ValuableDirectorSpawnBudgetGoalValuePatch {
+    // Keep Object Value's bonus from prematurely consuming the valuable spawn budget.
+    [HarmonyTranspiler]
+    private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) =>
+        ValuableObjectValuePatch.ReplaceSpawnBudgetValueLoad(instructions);
 }
 
 [HarmonyPatch(typeof(LevelGenerator), "Start")]
 public class LevelGeneratorObjectValueStartPatch {
-    internal static void Postfix(ValuableDirector __instance) {
+    internal static void Postfix() {
         if (SemiFunc.RunIsLevel()) {
             while (ValuableObjectValuePatch.DollarValueQueue.Count > 0) {
                 var valuable = ValuableObjectValuePatch.DollarValueQueue.Dequeue();
@@ -129,6 +264,8 @@ public class SurplusValuableValuePatch : SpawnedValuableValuePatch<SurplusValuab
             var origFixed = ValuableObjectValuePatch.FixedValueRef.Invoke(valuableObject);
             var origCurrent = ValuableObjectValuePatch.DollarValueCurrentRef.Invoke(valuableObject);
 
+            ValuableObjectValuePatch.EnsureBaseExtractionGoalValue(valuableObject, origCurrent);
+
             customValue.valueMin = origMin * objectValueUpgradeInstance.SurplusPercentScale.Value;
             customValue.valueMax = origMax * objectValueUpgradeInstance.SurplusPercentScale.Value;
             var origFixedScaled = ValuableObjectValuePatch.FixedValueRef.Invoke(valuableObject) = (int)(origFixed * objectValueUpgradeInstance.SurplusPercentScale.Value);
@@ -141,9 +278,32 @@ public class SurplusValuableValuePatch : SpawnedValuableValuePatch<SurplusValuab
             valuableObject.valuePreset.valueMax += (origMax - customValue.valueMax);
             ValuableObjectValuePatch.FixedValueRef.Invoke(valuableObject) += (origFixed - origFixedScaled);
             ValuableObjectValuePatch.DollarValueCurrentRef.Invoke(valuableObject) += (origCurrent - origCurrentScaled);
+            ValuableObjectValuePatch.UpdateExtractionGoalBonusFromCurrent(valuableObject);
 
             SLRUpgradePack.Logger.LogInfo($"Surplus bag worth {origCurrent} scaling {origCurrentScaled} to a total of {ValuableObjectValuePatch.DollarValueCurrentRef.Invoke(valuableObject)}");
         }
+    }
+}
+
+[HarmonyPatch(typeof(PhysGrabObjectImpactDetector))]
+public static class ValuableObjectDynamicGoalValuePatch {
+    private static readonly FieldRef<PhysGrabObjectImpactDetector, ValuableObject> ValuableObjectRef =
+        FieldRefAccess<PhysGrabObjectImpactDetector, ValuableObject>("valuableObject");
+
+    [HarmonyPatch("HealLogic")]
+    [HarmonyPostfix]
+    private static void HealLogicPostfix(PhysGrabObjectImpactDetector __instance) => RefreshGoalValue(__instance);
+
+    [HarmonyPatch("ResetObject")]
+    [HarmonyPostfix]
+    private static void ResetObjectPostfix(PhysGrabObjectImpactDetector __instance) => RefreshGoalValue(__instance);
+
+    private static void RefreshGoalValue(PhysGrabObjectImpactDetector instance) {
+        if (!SemiFunc.IsMasterClientOrSingleplayer()) return;
+
+        var valuableObject = ValuableObjectRef.Invoke(instance);
+        if (valuableObject)
+            ValuableObjectValuePatch.UpdateExtractionGoalBonusFromCurrent(valuableObject);
     }
 }
 

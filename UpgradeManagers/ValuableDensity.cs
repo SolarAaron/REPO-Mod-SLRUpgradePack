@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using BepInEx.Configuration;
 using HarmonyLib;
+using Photon.Pun;
+using Steamworks;
 using UnityEngine;
 using static HarmonyLib.AccessTools;
 
@@ -28,6 +30,21 @@ public class ValuableDensityUpgrade : UpgradeBase<float> {
 
     public override float Calculate(float value, PlayerAvatar player, int level) =>
         DefaultCalculateFloatIncrease(this, "ValuableDensity", value, player, level);
+
+    internal int GetTotalConnectedPlayerLevels() {
+        var playerLevels = UpgradeRegister?.PlayerDictionary;
+        if (playerLevels == null) return 0;
+
+        var activePlayerIds = SemiFunc.IsMultiplayer()
+            ? PhotonNetwork.PlayerList.Select(player => player.UserId)
+            : new[] { SteamClient.IsValid ? SteamClient.SteamId.ToString() : "0" };
+
+        return activePlayerIds
+            .Where(playerId => !string.IsNullOrWhiteSpace(playerId))
+            .Distinct()
+            .Where(playerLevels.ContainsKey)
+            .Sum(playerId => Math.Max(0, playerLevels[playerId]));
+    }
 }
 
 [HarmonyPatch(typeof(LevelGenerator), "Start")]
@@ -87,10 +104,8 @@ public class LevelGeneratorPatch {
 
             if (valuableDensityUpgrade.UpgradeRegister != null &&
                 valuableDensityUpgrade.UpgradeRegister.PlayerDictionary != null) {
-                var totalLevels = valuableDensityUpgrade.UpgradeRegister.PlayerDictionary
-                    .Where(kvp => SemiFunc.PlayerAvatarGetFromSteamID(kvp.Key) != null)
-                    .Select(kvp => kvp.Value)
-                    .Sum();
+                var totalLevels = valuableDensityUpgrade.GetTotalConnectedPlayerLevels();
+                SLRUpgradePack.Logger.LogInfo($"Total levels for density upgrade: {totalLevels}");
                 if (valuableDensityUpgrade.TotalMaxAmountCurves.Count != 0) {
                     SLRUpgradePack.Logger.LogInfo("Replacing Max Amount curve");
                     foreach (var element in GetNumberedFieldRefs<ValuableDirector, AnimationCurve>(

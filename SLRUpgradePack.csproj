@@ -51,6 +51,10 @@
             <HintPath>..\..\.steam\steam\steamapps\common\REPO\REPO_Data\Managed\PhotonRealtime.dll</HintPath>
             <Private>False</Private>
         </Reference>
+        <Reference Include="Facepunch.Steamworks.Win64">
+            <HintPath>..\..\.steam\steam\steamapps\common\REPO\REPO_Data\Managed\Facepunch.Steamworks.Win64.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
     </ItemGroup>
     <ItemGroup>
         <EmbeddedResource Update="Properties\Resources.resx">
@@ -65,4 +69,27 @@
             <DependentUpon>Resources.resx</DependentUpon>
         </Compile>
     </ItemGroup>
+
+    <!-- Package staging files are not runtime plugin payloads; keep them out of the profile. -->
+    <ItemGroup>
+        <None Update="package/**/*">
+            <CopyToPluginOutputDirectory>Never</CopyToPluginOutputDirectory>
+        </None>
+    </ItemGroup>
+
+    <!-- The plugin build targets copy current outputs but leave renamed/removed
+         assemblies behind in the profile's plugin directory. -->
+    <Target Name="RemoveStalePluginAssemblies"
+            BeforeTargets="CopyFilesToPluginOutputDirectory"
+            DependsOnTargets="GetCopyToPluginOutputItems"
+            Condition="'$(PluginOutputDirectory)' != ''">
+        <ItemGroup>
+            <_ExistingPluginAssemblies Include="$(PluginOutputDirectory)**/*.dll"/>
+            <_ExpectedPluginAssemblies Include="@(CopyToPluginOutputItems-&gt;'$(PluginOutputDirectory)%(TargetPath)')"
+                                       Condition="'%(CopyToPluginOutputItems.Extension)' == '.dll'"/>
+            <_StalePluginAssemblies Include="@(_ExistingPluginAssemblies)"
+                                    Exclude="@(_ExpectedPluginAssemblies)"/>
+        </ItemGroup>
+        <Delete Files="@(_StalePluginAssemblies)"/>
+    </Target>
 </Project>
