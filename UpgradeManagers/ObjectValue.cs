@@ -93,7 +93,7 @@ public class ValuableObjectValuePatch {
 
         if (SemiFunc.IsMasterClientOrSingleplayer() && objectValueUpgrade.UpgradeEnabled.Value) {
             if (!objectValueUpgrade.UpgradeScalesSurplus.Value &&
-                instance.name.StartsWithIgnoreCaseFast("surplus")) return;
+                instance.name.StartsWith("surplus", StringComparison.OrdinalIgnoreCase)) return;
 
             SLRUpgradePack.Logger.LogDebug(
                 $"{instance.name} Original value: {instance.valuePreset.valueMin} - {instance.valuePreset.valueMax} ({DollarValueCurrentRef.Invoke(instance)} / {FixedValueRef.Invoke(instance)})");
@@ -209,9 +209,19 @@ public class ValuableObjectValuePatch {
 
 [HarmonyPatch]
 public static class ValuableObjectExtractionGoalValuePatch {
-    private static MethodBase TargetMethod() {
-        var stateMachineType = Inner(typeof(ValuableObject), "<DollarValueSet>d__38");
-        return Method(stateMachineType!, "MoveNext")!;
+    private static IEnumerable<MethodBase> TargetMethods() {
+        var dollarValueSetMethod = Method(typeof(ValuableObject), "DollarValueSet");
+        var stateMachineType = dollarValueSetMethod?.GetCustomAttribute<IteratorStateMachineAttribute>()?.StateMachineType
+            ?? typeof(ValuableObject).GetNestedTypes(BindingFlags.NonPublic)
+                .FirstOrDefault(type => type.Name.StartsWith("<DollarValueSet>d__", StringComparison.Ordinal));
+        var moveNextMethod = stateMachineType == null ? null : Method(stateMachineType, "MoveNext");
+        if (moveNextMethod == null) {
+            SLRUpgradePack.Logger.LogWarning(
+                "Could not locate ValuableObject.DollarValueSet's iterator; extraction-goal value patch was skipped.");
+            yield break;
+        }
+
+        yield return moveNextMethod;
     }
 
     // Ignore Object Value's bonus only when REPO accumulates the level's extraction goal.

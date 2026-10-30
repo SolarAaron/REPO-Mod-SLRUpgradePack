@@ -224,7 +224,9 @@ public class LevelGeneratorPatch {
         newCurve.CopyFrom(target);
         newCurve.ClearKeys();
 
-        foreach (var key in target.GetKeys()) {
+        var keys = new Keyframe[target.length];
+        target.GetKeys(keys);
+        foreach (var key in keys) {
             var newKey = key with {
                 value = calculate.Invoke(key.value)
             };

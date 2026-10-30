@@ -1,3 +1,12 @@
+# v0.6.0
+
+* Confirmed build against REPO 0.5 update + REPOLib 4.3.0
+* Temporarily removed keybindlib dependency
+  * Binding configuration is present under mod settings
+* Crosshair now restored after reviving with extra life
+* Improved synchronization of Heart of Gold with extraction zones
+* Extra life now waits for the extraction to complete before attempting to revive a player that would be revived anyway
+
 # v0.5.1
 
 * Implemented inventory slot battery displays

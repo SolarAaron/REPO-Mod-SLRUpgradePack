@@ -5,7 +5,6 @@ using System.Reflection;
 using BepInEx;
 using BepInEx.Configuration;
 using HarmonyLib;
-using KeybindLib.Classes;
 using Photon.Pun;
 using TMPro;
 using UnityEngine;
@@ -16,12 +15,12 @@ namespace SLRUpgradePack.UpgradeManagers;
 
 public class InventorySlotUpgrade : UpgradeBase<int> {
     internal static readonly Dictionary<string, Dictionary<int, int>> serverMonitoredInventoryItems = new();
-    public Keybind ItemSlot4 { get; set; }
-    public Keybind ItemSlot5 { get; set; }
-    public Keybind ItemSlot6 { get; set; }
-    public Keybind ItemSlot7 { get; set; }
-    public Keybind ItemSlot8 { get; set; }
-    public Keybind ItemSlot9 { get; set; }
+    public ConfigEntry<KeyboardShortcut> ItemSlot4 { get; }
+    public ConfigEntry<KeyboardShortcut> ItemSlot5 { get; }
+    public ConfigEntry<KeyboardShortcut> ItemSlot6 { get; }
+    public ConfigEntry<KeyboardShortcut> ItemSlot7 { get; }
+    public ConfigEntry<KeyboardShortcut> ItemSlot8 { get; }
+    public ConfigEntry<KeyboardShortcut> ItemSlot9 { get; }
     internal string? BoundPlayer { get; set; }
     public Inventory? InventoryRef { get; set; }
     public InventoryUI? UIRef { get; set; }
@@ -31,15 +30,30 @@ public class InventorySlotUpgrade : UpgradeBase<int> {
         float priceMultiplier) :
         base("Inventory Slot", "assets/repo/mods/resources/items/items/item upgrade inventory slot lib.asset", enabled,
             upgradeAmount, false, 0, config, assetBundle, priceMultiplier, false, false, 6) {
-        var RegisterMethod = Method(typeof(Keybinds), "Register");
-        var plugin = typeof(SLRUpgradePack).GetCustomAttribute<BepInPlugin>();
-        ItemSlot4 = Keybinds.Bind("Item slots", "Item Slot 4", "<keyboard>/z");
-        ItemSlot5 = Keybinds.Bind("Item Slots", "Item Slot 5", "<keyboard>/x");
-        ItemSlot6 = Keybinds.Bind("Item Slots", "Item Slot 6", "<keyboard>/c");
-        ItemSlot7 = Keybinds.Bind("Item Slots", "Item Slot 7", "<keyboard>/n");
-        ItemSlot8 = Keybinds.Bind("Item Slots", "Item Slot 8", "<keyboard>/m");
-        ItemSlot9 = Keybinds.Bind("Item Slots", "Item Slot 9", "<keyboard>/,");
+        const string section = "Inventory Slot Upgrade";
+        ItemSlot4 = config.Bind(section, "Item Slot 4", new KeyboardShortcut(KeyCode.Z),
+            "Key to select inventory slot 4.");
+        ItemSlot5 = config.Bind(section, "Item Slot 5", new KeyboardShortcut(KeyCode.X),
+            "Key to select inventory slot 5.");
+        ItemSlot6 = config.Bind(section, "Item Slot 6", new KeyboardShortcut(KeyCode.C),
+            "Key to select inventory slot 6.");
+        ItemSlot7 = config.Bind(section, "Item Slot 7", new KeyboardShortcut(KeyCode.N),
+            "Key to select inventory slot 7.");
+        ItemSlot8 = config.Bind(section, "Item Slot 8", new KeyboardShortcut(KeyCode.M),
+            "Key to select inventory slot 8.");
+        ItemSlot9 = config.Bind(section, "Item Slot 9", new KeyboardShortcut(KeyCode.Comma),
+            "Key to select inventory slot 9.");
     }
+
+    internal ConfigEntry<KeyboardShortcut>? GetSlotBinding(int index) => index switch {
+        3 => ItemSlot4,
+        4 => ItemSlot5,
+        5 => ItemSlot6,
+        6 => ItemSlot7,
+        7 => ItemSlot8,
+        8 => ItemSlot9,
+        _ => null
+    };
 
     public override int Calculate(int value, PlayerAvatar player, int level) {
         return value + level;
@@ -159,6 +173,7 @@ public class InventoryUIStartPatch {
         FieldRefAccess<InventoryBattery, Vector3>("originalLocalScale");
 
     private static readonly Dictionary<int, (int frame, int batteryId)> batteryVisualRefreshes = new();
+    private static readonly Dictionary<int, TextMeshProUGUI> slotNumberLabels = new();
     private static readonly Dictionary<int, (Vector3 position, float scale, float rotation)> clonedBatteryVisualsPendingStart = new();
     private static int batteryVisualRefreshFrame = -1;
 
@@ -244,10 +259,7 @@ public class InventoryUIStartPatch {
                     foreach (var batteryIndicator in component.GetComponentsInChildren<InventoryBattery>(true))
                         batteryIndicator.inventorySpot = j;
                     RestoreClonedBatteryScales(templateSpot, val);
-                    var slotNumber = (j + 1).ToString();
-                    if (component.noItem) component.noItem.text = slotNumber;
-                    var numberText = val.Find("Numbers")?.GetComponent<TextMeshProUGUI>();
-                    if (numberText) numberText.text = slotNumber;
+                    InventorySpotUpdatePatch.RefreshSlotBindingLabel(component);
                     SetSpotPosition(component, position, templateShowPosition, templateHideOffset,
                         templateHideCurrentOffset, templateInitialOffset, false);
                     existingSpots[j] = component;
@@ -444,6 +456,27 @@ public class InventoryUIStartPatch {
 
     internal static void ClearPendingClonedBatteryVisuals() => clonedBatteryVisualsPendingStart.Clear();
 
+    internal static void ClearSlotNumberLabels() => slotNumberLabels.Clear();
+
+    internal static void RefreshSlotBindingLabel(InventorySpot spot, string bindingDisplay) {
+        if (!spot) return;
+
+        if (spot.noItem && spot.noItem.text != bindingDisplay)
+            spot.noItem.text = bindingDisplay;
+
+        var spotId = spot.GetInstanceID();
+        if (!slotNumberLabels.TryGetValue(spotId, out var numberLabel) || !numberLabel) {
+            numberLabel = spot.transform.Find("Numbers")?.GetComponent<TextMeshProUGUI>();
+            if (numberLabel)
+                slotNumberLabels[spotId] = numberLabel;
+            else
+                slotNumberLabels.Remove(spotId);
+        }
+
+        if (numberLabel && numberLabel.text != bindingDisplay)
+            numberLabel.text = bindingDisplay;
+    }
+
     internal static void RefreshBatteryVisual(InventorySpot spot, bool forceRefresh = true) {
         if (!spot) return;
 
@@ -580,6 +613,7 @@ public class MainMenuOpenStartPatch {
     private static void Postfix(MainMenuOpen __instance) {
         InventorySlotUpgrade.serverMonitoredInventoryItems.Clear();
         InventoryUIStartPatch.ClearPendingClonedBatteryVisuals();
+        InventoryUIStartPatch.ClearSlotNumberLabels();
     }
 }
 
@@ -597,7 +631,7 @@ public class InventoryStartPatch {
 
             SLRUpgradePack.Logger.LogInfo($"Player has {extraSlots} slots");
             while (inventorySpots.Invoke(__instance).Count < extraSlots)
-                inventorySpots.Invoke(__instance).Add(null);
+                inventorySpots.Invoke(__instance).Add(null!);
         }
     }
 
@@ -621,24 +655,133 @@ public class InventoryStartPatch {
 public class InventorySpotUpdatePatch {
     private static readonly MethodInfo HandleInputMethod = Method(typeof(InventorySpot), "HandleInput");
 
-    private static void Prefix(InventorySpot __instance) {
+    private static void Postfix(InventorySpot __instance) {
         var inventorySlotUpgrade = SLRUpgradePack.InventorySlotUpgradeInstance;
-        if (inventorySlotUpgrade.UpgradeEnabled.Value && inventorySlotUpgrade.BoundPlayer != null) {
-            var slotCount = inventorySlotUpgrade.Calculate(3, SemiFunc.PlayerAvatarLocal(),
-                inventorySlotUpgrade.UpgradeRegister.GetLevel(inventorySlotUpgrade.BoundPlayer));
-            List<Keybind?> slotInputs = [
-                null, null, null, inventorySlotUpgrade.ItemSlot4, inventorySlotUpgrade.ItemSlot5,
-                inventorySlotUpgrade.ItemSlot6, inventorySlotUpgrade.ItemSlot7, inventorySlotUpgrade.ItemSlot8,
-                inventorySlotUpgrade.ItemSlot9
-            ];
-            if (__instance.inventorySpotIndex > 2 && __instance.inventorySpotIndex < slotCount) {
-                var slotInput = slotInputs[__instance.inventorySpotIndex];
-                if (slotInput == null || !InputManager.instance.KeyDown(slotInput.inputKey)) return;
+        if (!inventorySlotUpgrade.UpgradeEnabled.Value || inventorySlotUpgrade.BoundPlayer == null) return;
 
-                HandleInputMethod.Invoke(__instance, null);
-            }
-        }
+        var index = __instance.inventorySpotIndex;
+        if (index < 3 || index >= inventorySlotUpgrade.Calculate(3, SemiFunc.PlayerAvatarLocal(),
+                inventorySlotUpgrade.UpgradeRegister.GetLevel(inventorySlotUpgrade.BoundPlayer))) return;
+
+        var slotBinding = inventorySlotUpgrade.GetSlotBinding(index);
+        if (slotBinding == null) return;
+
+        var shortcut = slotBinding.Value;
+        // BepInEx reads the configured shortcut directly; routing through the game's InputManager
+        // would apply its action filters and could suppress the extra-slot input when a vanilla
+        // action is held at the same time. KeyboardShortcut.IsDown() also rejects any unrelated
+        // key being held, which prevents these slots from working while movement keys are down.
+        RefreshSlotBindingLabel(__instance, InventorySlotInput.GetDisplay(shortcut));
+        if (InventorySlotInput.IsDown(shortcut))
+            HandleInputMethod.Invoke(__instance, null);
     }
+
+    internal static void RefreshSlotBindingLabel(InventorySpot spot) {
+        var upgrade = SLRUpgradePack.InventorySlotUpgradeInstance;
+        var binding = upgrade.GetSlotBinding(spot.inventorySpotIndex);
+        if (binding != null)
+            RefreshSlotBindingLabel(spot, InventorySlotInput.GetDisplay(binding.Value));
+    }
+
+    internal static void RefreshSlotBindingLabel(InventorySpot spot, string display) =>
+        InventoryUIStartPatch.RefreshSlotBindingLabel(spot, display);
+}
+
+internal static class InventorySlotInput {
+    private static readonly KeyCode[] modifierKeys = {
+        KeyCode.LeftShift, KeyCode.RightShift,
+        KeyCode.LeftControl, KeyCode.RightControl,
+        KeyCode.LeftAlt, KeyCode.RightAlt, KeyCode.AltGr,
+        KeyCode.LeftCommand, KeyCode.RightCommand,
+        KeyCode.LeftApple, KeyCode.RightApple,
+        KeyCode.LeftWindows, KeyCode.RightWindows,
+        KeyCode.LeftMeta, KeyCode.RightMeta
+    };
+
+    internal static bool IsDown(KeyboardShortcut shortcut) {
+        var mainKey = shortcut.MainKey;
+        if (mainKey == KeyCode.None) return false;
+
+        var input = UnityInput.Current;
+        if (!input.GetKeyDown(mainKey)) return false;
+
+        var modifiers = shortcut.Modifiers.ToArray();
+        if (modifiers.Any(modifier => !input.GetKey(modifier))) return false;
+
+        // Preserve modifier-chord behavior, but don't treat held movement/action keys as
+        // modifiers. BepInEx's built-in check rejects every held non-modifier key.
+        return !modifierKeys.Any(modifier => modifier != mainKey && !modifiers.Contains(modifier) &&
+                                             input.GetKey(modifier));
+    }
+
+    internal static string GetDisplay(KeyboardShortcut shortcut) {
+        var keys = shortcut.Modifiers.Select(FormatKeyCode).ToList();
+        keys.Add(FormatKeyCode(shortcut.MainKey));
+        return string.Join(" + ", keys);
+    }
+
+    private static string FormatKeyCode(KeyCode key) => key switch {
+        KeyCode.None => "Not set",
+        KeyCode.Alpha0 => "0",
+        KeyCode.Alpha1 => "1",
+        KeyCode.Alpha2 => "2",
+        KeyCode.Alpha3 => "3",
+        KeyCode.Alpha4 => "4",
+        KeyCode.Alpha5 => "5",
+        KeyCode.Alpha6 => "6",
+        KeyCode.Alpha7 => "7",
+        KeyCode.Alpha8 => "8",
+        KeyCode.Alpha9 => "9",
+        KeyCode.Keypad0 => "Num 0",
+        KeyCode.Keypad1 => "Num 1",
+        KeyCode.Keypad2 => "Num 2",
+        KeyCode.Keypad3 => "Num 3",
+        KeyCode.Keypad4 => "Num 4",
+        KeyCode.Keypad5 => "Num 5",
+        KeyCode.Keypad6 => "Num 6",
+        KeyCode.Keypad7 => "Num 7",
+        KeyCode.Keypad8 => "Num 8",
+        KeyCode.Keypad9 => "Num 9",
+        KeyCode.Exclaim => "!",
+        KeyCode.DoubleQuote => "\"",
+        KeyCode.Hash => "#",
+        KeyCode.Dollar => "$",
+        KeyCode.Percent => "%",
+        KeyCode.Ampersand => "&",
+        KeyCode.Quote => "'",
+        KeyCode.LeftParen => "(",
+        KeyCode.RightParen => ")",
+        KeyCode.Asterisk => "*",
+        KeyCode.Plus => "+",
+        KeyCode.Comma => ",",
+        KeyCode.Minus => "-",
+        KeyCode.Period => ".",
+        KeyCode.Slash => "/",
+        KeyCode.Colon => ":",
+        KeyCode.Semicolon => ";",
+        KeyCode.Less => "<",
+        KeyCode.Equals => "=",
+        KeyCode.Greater => ">",
+        KeyCode.Question => "?",
+        KeyCode.At => "@",
+        KeyCode.LeftBracket => "[",
+        KeyCode.Backslash => "\\",
+        KeyCode.RightBracket => "]",
+        KeyCode.Caret => "^",
+        KeyCode.Underscore => "_",
+        KeyCode.BackQuote => "`",
+        KeyCode.LeftCurlyBracket => "{",
+        KeyCode.Pipe => "|",
+        KeyCode.RightCurlyBracket => "}",
+        KeyCode.Tilde => "~",
+        KeyCode.Return => "Enter",
+        KeyCode.LeftControl or KeyCode.RightControl => "Ctrl",
+        KeyCode.LeftShift or KeyCode.RightShift => "Shift",
+        KeyCode.LeftAlt or KeyCode.RightAlt or KeyCode.AltGr => "Alt",
+        KeyCode.LeftCommand or KeyCode.RightCommand or KeyCode.LeftApple or KeyCode.RightApple or
+            KeyCode.LeftWindows or KeyCode.RightWindows or KeyCode.LeftMeta or KeyCode.RightMeta => "Cmd",
+        _ => key.ToString()
+    };
 }
 
 [HarmonyPatch(typeof(PunManager), "SetItemNameLOGIC")]

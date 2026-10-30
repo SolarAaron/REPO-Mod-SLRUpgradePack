@@ -71,13 +71,28 @@ public class HeartOfGoldUpgrade : UpgradeBase<float> {
 
     internal override void InitUpgrade(PlayerAvatar player, int level) {
         base.InitUpgrade(player, level);
+        EnsureGoldenHeart(player, level);
+    }
 
-        if (GoldenHearts.TryGetValue(SemiFunc.PlayerGetSteamID(player), out var goldenHeart))
-            Object.Destroy(goldenHeart);
+    internal override void UseUpgrade(PlayerAvatar player, int level) {
+        base.UseUpgrade(player, level);
+        EnsureGoldenHeart(player, level);
+    }
+
+    private void EnsureGoldenHeart(PlayerAvatar player, int level) {
+        if (!player) return;
+
+        var playerId = SemiFunc.PlayerGetSteamID(player);
+        if (GoldenHearts.TryGetValue(playerId, out var goldenHeart) && goldenHeart) {
+            goldenHeart.player = player;
+            return;
+        }
 
         goldenHeart = new GameObject($"Golden Heart: {SemiFunc.PlayerGetName(player)}").AddComponent<GoldenHeart>();
         goldenHeart.player = player;
-        GoldenHearts[SemiFunc.PlayerGetSteamID(player)] = goldenHeart;
+        GoldenHearts[playerId] = goldenHeart;
+        SLRUpgradePack.Logger.LogInfo(
+            $"Initialized Heart of Gold tracker for {SemiFunc.PlayerGetName(player)} at level {level}");
     }
 }
 
@@ -86,6 +101,7 @@ public class GoldenHeart : MonoBehaviour {
 
     internal PlayerAvatar player { get; set; }
     internal bool Pause { get; set; }
+    internal float NextExtractionZoneRefreshTime { get; set; }
     internal int lastLevel { get; set; } = -1;
     internal int lastHealth { get; set; } = -1;
     internal ValuableObject? ValuableComponent { get; private set; }
@@ -97,15 +113,12 @@ public class GoldenHeart : MonoBehaviour {
     private bool hasQueuedFinalValue;
     private float queuedFinalBaseValue;
     private float queuedFinalValue;
-    private float pendingBaseValue;
     private float nextRegistrationRetryTime;
     private readonly HashSet<int> registeredActorNumbers = new();
     private readonly HashSet<int> knownRemoteActorNumbers = new();
 
     private PhotonView photonView;
     private readonly FieldRef<PlayerHealth, int> _healthRef = FieldRefAccess<PlayerHealth, int>("health");
-    private static readonly FieldRef<RoundDirector, bool>? ExtractionPointsFetchedRef = FieldRefAccess<RoundDirector, bool>("extractionPointsFetched");
-
     private readonly FieldRef<ValuableObject, PhysAttribute> _physAttributePresetRef =
         FieldRefAccess<ValuableObject, PhysAttribute>("physAttributePreset");
 
@@ -241,15 +254,20 @@ public class GoldenHeart : MonoBehaviour {
         if (SemiFunc.PlayerAvatarLocal() != player) return;
         if (!player.playerHealth) return;
 
-        if (!RoundDirector.instance || !ExtractionPointsFetchedRef.Invoke(RoundDirector.instance)) return;
-
         var heartOfGoldUpgrade = SLRUpgradePack.HeartOfGoldUpgradeInstance;
 
         if (!heartOfGoldUpgrade.UpgradeEnabled.Value) return;
         if (Pause) return;
         var currentLevel = heartOfGoldUpgrade.UpgradeRegister.GetLevel(player);
+        if (currentLevel == 0) return;
+
+        // Heart of Gold is a player-bound valuable; its creation and value must not wait for
+        // extraction-point discovery, which can happen much later than player initialization.
+        if (!ValuableComponent) CreateOnlyMe();
+        if (!ValuableComponent) return;
+
         var currentHealth = _healthRef.Invoke(player.playerHealth);
-        if (currentLevel == 0 || currentHealth == 0) return;
+        if (currentHealth == 0) return;
 
         if (lastLevel != currentLevel || lastHealth != currentHealth) {
             lastLevel = currentLevel;
@@ -259,12 +277,7 @@ public class GoldenHeart : MonoBehaviour {
 
         var heartValue = heartOfGoldUpgrade.Calculate(
             currentHealth * heartOfGoldUpgrade.BaseHeartValue.Value, player, currentLevel);
-        pendingBaseValue = heartValue;
-
         if (SemiFunc.IsMultiplayer() && !EnsureRemoteViewsRegistered()) return;
-
-        if (!ValuableComponent) CreateOnlyMe();
-        if (!ValuableComponent) return;
 
         if (!valueSyncPending) return;
 
@@ -342,6 +355,9 @@ public class GoldenHeart : MonoBehaviour {
         valuableComponent.valuePreset.valueMin = baseValue;
         valuableComponent.valuePreset.valueMax = baseValue;
 
+        SLRUpgradePack.Logger.LogInfo(
+            $"Heart of Gold value updated for {SemiFunc.PlayerGetName(player)}: base={baseValue}, final={finalValue}, health={_healthRef.Invoke(player.playerHealth)}, level={SLRUpgradePack.HeartOfGoldUpgradeInstance.UpgradeRegister.GetLevel(player)}");
+
         if (!SemiFunc.IsMultiplayer()) HeartOfGoldValueSetRPC(baseValue, finalValue);
         else photonView.RPC(nameof(HeartOfGoldValueSetRPC), RpcTarget.All, baseValue, finalValue);
     }
@@ -398,12 +414,21 @@ public class GoldenHeart : MonoBehaviour {
 
 [HarmonyPatch(typeof(ExtractionPoint))]
 public class ExtractionPointDestroyPatch {
-    private static readonly FieldRef<RoundDirector, int>? TotalHaulRef = FieldRefAccess<RoundDirector, int>("totalHaul");
-    private static readonly FieldRef<ValuableObject, float>? DollarValueCurrentRef = FieldRefAccess<ValuableObject, float>("dollarValueCurrent");
-    private static readonly FieldRef<ProgressionManager, float>? HaulingPointsRef = FieldRefAccess<ProgressionManager, float>("roundPointsHauling");
+    private static readonly FieldRef<RoundDirector, int> TotalHaulRef = FieldRefAccess<RoundDirector, int>("totalHaul");
+    private static readonly FieldRef<RoundDirector, int> CurrentHaulRef = FieldRefAccess<RoundDirector, int>("currentHaul");
+    private static readonly FieldRef<ValuableObject, float> DollarValueCurrentRef = FieldRefAccess<ValuableObject, float>("dollarValueCurrent");
+    private static readonly FieldRef<ProgressionManager, float> HaulingPointsRef = FieldRefAccess<ProgressionManager, float>("roundPointsHauling");
+    private static readonly FieldRef<PlayerAvatar, PlayerDeathHead> PlayerDeathHeadRef = FieldRefAccess<PlayerAvatar, PlayerDeathHead>("playerDeathHead");
+    private static readonly FieldRef<PlayerAvatar, RoomVolumeCheck> PlayerAvatarRoomVolumeCheckRef = FieldRefAccess<PlayerAvatar, RoomVolumeCheck>("RoomVolumeCheck");
+    private static readonly FieldRef<PlayerDeathHead, RoomVolumeCheck> PlayerDeathHeadRoomVolumeCheckRef = FieldRefAccess<PlayerDeathHead, RoomVolumeCheck>("roomVolumeCheck");
+    private static readonly FieldRef<PlayerDeathHead, bool> PlayerDeathHeadTriggeredRef = FieldRefAccess<PlayerDeathHead, bool>("triggered");
+    private static readonly FieldRef<RoomVolumeCheck, bool> RoomVolumeInExtractionPointRef = FieldRefAccess<RoomVolumeCheck, bool>("inExtractionPoint");
     private static readonly MethodInfo ExtractCosmeticMethod = Method(typeof(ExtractionPoint), "ExtractCosmeticWorldObject", [typeof(bool)]);
+    private static readonly Dictionary<int, bool> LastReportedExtractionPresence = new();
+    private static readonly HashSet<int> LastReportedHaulApplications = new();
+    private static float NextRoundHaulTraceTime;
 
-    private static bool TryGetGoldenHeart(HeartOfGoldUpgrade upgrade, ValuableObject valuableObject,
+    internal static bool TryGetGoldenHeart(HeartOfGoldUpgrade upgrade, ValuableObject valuableObject,
         out GoldenHeart goldenHeart) {
         foreach (var candidate in upgrade.GoldenHearts.Values) {
             if (candidate && candidate.ValuableComponent == valuableObject) {
@@ -416,6 +441,12 @@ public class ExtractionPointDestroyPatch {
         return false;
     }
 
+    internal static bool IsGoldenHeartValuable(ValuableObject valuableObject) {
+        var heartOfGoldUpgrade = SLRUpgradePack.HeartOfGoldUpgradeInstance;
+        return heartOfGoldUpgrade != null && valuableObject &&
+               TryGetGoldenHeart(heartOfGoldUpgrade, valuableObject, out _);
+    }
+
     private static void AddGoldenHeartHaulValue(ExtractionPoint extractionPoint, ValuableObject valuableObject) {
         var value = DollarValueCurrentRef.Invoke(valuableObject);
         TotalHaulRef.Invoke(RoundDirector.instance) += (int)value;
@@ -423,6 +454,86 @@ public class ExtractionPointDestroyPatch {
         var haulScore = valuableObject.GetLocalPlayerHaulScore(extractionPoint.gameObject);
         if (haulScore > 0f)
             HaulingPointsRef.Invoke(ProgressionManager.instance) += value / 10f * haulScore;
+    }
+
+    // Run after the game's haul list has been tallied. This is called even while the haul is below
+    // quota, unlike the extraction-point state callback, so standing in the zone updates the live
+    // value instead of waiting for the extraction sequence to start.
+    internal static void AddPlayerHeartValueToCurrentHaul(RoundDirector roundDirector) {
+        var heartOfGoldUpgrade = SLRUpgradePack.HeartOfGoldUpgradeInstance;
+        if (heartOfGoldUpgrade == null || !roundDirector || !heartOfGoldUpgrade.UpgradeEnabled.Value ||
+            !SemiFunc.IsMasterClientOrSingleplayer()) return;
+
+        if (heartOfGoldUpgrade.GoldenHearts.Values.Any(heart => heart && heart.ValuableComponent) &&
+            Time.unscaledTime >= NextRoundHaulTraceTime) {
+            SLRUpgradePack.Logger.LogInfo(
+                $"Heart of Gold round haul check: currentHaul={CurrentHaulRef(roundDirector)}, listedHearts={heartOfGoldUpgrade.GoldenHearts.Values.Count(heart => heart && heart.ValuableComponent && roundDirector.dollarHaulList.Contains(heart.ValuableComponent.gameObject))}");
+            NextRoundHaulTraceTime = Time.unscaledTime + 2f;
+        }
+
+        var playerHeartValue = 0;
+        foreach (var goldenHeart in heartOfGoldUpgrade.GoldenHearts.Values) {
+            if (!IsPlayerHeartInExtraction(goldenHeart)) continue;
+
+            var valuableObject = goldenHeart.ValuableComponent;
+            if (!valuableObject) continue;
+
+            var value = (int)DollarValueCurrentRef.Invoke(valuableObject);
+            playerHeartValue += value;
+            if (LastReportedHaulApplications.Add(goldenHeart.GetInstanceID()))
+                SLRUpgradePack.Logger.LogInfo(
+                    $"Added Heart of Gold value to live haul for {SemiFunc.PlayerGetName(goldenHeart.player)}: {value}");
+        }
+
+        // RoundDirector.HaulCheck recalculates currentHaul from scratch, so adding here cannot
+        // accumulate across frames. ExtractionPoint then consumes this value for display/quota.
+        if (playerHeartValue > 0) CurrentHaulRef(roundDirector) += playerHeartValue;
+    }
+
+    internal static bool IsPlayerHeartInExtraction(GoldenHeart goldenHeart, bool refreshZone = false) {
+        if (!goldenHeart || goldenHeart.Pause || !goldenHeart.player || !goldenHeart.ValuableComponent)
+            return false;
+
+        var playerDeathHead = PlayerDeathHeadRef(goldenHeart.player);
+        var playerRoomVolumeCheck = PlayerAvatarRoomVolumeCheckRef(goldenHeart.player);
+        var deathHeadRoomVolumeCheck = playerDeathHead ? PlayerDeathHeadRoomVolumeCheckRef(playerDeathHead) : null;
+        if (!playerRoomVolumeCheck && !deathHeadRoomVolumeCheck) return false;
+
+        // The avatar and its death head have distinct room-volume checks. The avatar check is the one
+        // that follows a living player; the death-head check is only relevant after the head is triggered.
+        // Refresh both before reading because their normal checks can be paused or run on different ticks.
+        if (refreshZone || Time.time >= goldenHeart.NextExtractionZoneRefreshTime) {
+            if (playerRoomVolumeCheck) playerRoomVolumeCheck.CheckSet();
+            if (deathHeadRoomVolumeCheck) deathHeadRoomVolumeCheck.CheckSet();
+            goldenHeart.NextExtractionZoneRefreshTime = Time.time + 0.1f;
+        }
+        var avatarInExtraction = playerRoomVolumeCheck && RoomVolumeInExtractionPointRef(playerRoomVolumeCheck);
+        var deathHeadInExtraction = playerDeathHead && PlayerDeathHeadTriggeredRef(playerDeathHead) &&
+                                    deathHeadRoomVolumeCheck && RoomVolumeInExtractionPointRef(deathHeadRoomVolumeCheck);
+        var isInExtraction = avatarInExtraction || deathHeadInExtraction;
+        var heartId = goldenHeart.GetInstanceID();
+        if (!LastReportedExtractionPresence.TryGetValue(heartId, out var wasInExtraction) ||
+            wasInExtraction != isInExtraction) {
+            LastReportedExtractionPresence[heartId] = isInExtraction;
+            SLRUpgradePack.Logger.LogInfo(
+                $"Heart of Gold zone check for {SemiFunc.PlayerGetName(goldenHeart.player)}: inExtraction={isInExtraction}, avatar={avatarInExtraction}, deathHead={deathHeadInExtraction}, value={DollarValueCurrentRef.Invoke(goldenHeart.ValuableComponent)}");
+        }
+        if (!isInExtraction) LastReportedHaulApplications.Remove(heartId);
+
+        return isInExtraction;
+    }
+
+    private static void ExtractGoldenHeart(ExtractionPoint extractionPoint, GoldenHeart goldenHeart) {
+        var valuableObject = goldenHeart.ValuableComponent;
+        if (!valuableObject) return;
+
+        AddGoldenHeartHaulValue(extractionPoint, valuableObject);
+        RoundDirector.instance.dollarHaulList.Remove(valuableObject.gameObject);
+        SLRUpgradePack.Logger.LogInfo(
+            $"Player {SemiFunc.PlayerGetName(goldenHeart.player)} in extraction zone counts as valuable");
+        goldenHeart.Pause = true;
+        goldenHeart.PauseLogic(true);
+        goldenHeart.DestroyOnlyMe();
     }
 
     [HarmonyPatch("DestroyAllPhysObjectsInHaulList")]
@@ -439,12 +550,15 @@ public class ExtractionPointDestroyPatch {
                 !valuableObject || !TryGetGoldenHeart(heartOfGoldUpgrade, valuableObject, out var goldenHeart))
                 continue;
 
-            AddGoldenHeartHaulValue(__instance, valuableObject);
-            dollarHaulList.Remove(dollarHaul);
-            SLRUpgradePack.Logger.LogInfo(
-                $"Player {SemiFunc.PlayerGetName(goldenHeart.player)} in extraction zone counts as valuable");
-            goldenHeart.PauseLogic(true);
-            goldenHeart.DestroyOnlyMe();
+            ExtractGoldenHeart(__instance, goldenHeart);
+        }
+
+        // Golden Hearts are attached to players and their hidden PhysGrabObject is disabled, so the game does not
+        // reliably add them to dollarHaulList. Check each player's live RoomVolumeCheck instead.
+        foreach (var goldenHeart in new List<GoldenHeart>(heartOfGoldUpgrade.GoldenHearts.Values)) {
+            if (!IsPlayerHeartInExtraction(goldenHeart, refreshZone: true)) continue;
+
+            ExtractGoldenHeart(__instance, goldenHeart);
         }
 
         // Leave the rest of extraction to REPO so its revive, scoring, box, and cosmetic logic stays authoritative.
@@ -471,12 +585,7 @@ public class ExtractionPointDestroyPatch {
             !TryGetGoldenHeart(heartOfGoldUpgrade, valuableObject, out var goldenHeart))
             return true;
 
-        AddGoldenHeartHaulValue(__instance, valuableObject);
-        dollarHaulList.RemoveAt(0);
-        SLRUpgradePack.Logger.LogInfo(
-            $"Player {SemiFunc.PlayerGetName(goldenHeart.player)} in extraction zone counts as valuable");
-        goldenHeart.PauseLogic(true);
-        goldenHeart.DestroyOnlyMe();
+        ExtractGoldenHeart(__instance, goldenHeart);
 
         return false;
     }
@@ -487,5 +596,23 @@ public class RoundDirectorUpdatePatch {
     private static void Prefix(RoundDirector __instance) {
         __instance.dollarHaulList.RemoveAll(go =>
             go == null || !go.TryGetComponent<ValuableObject>(out var valuableObject) || !valuableObject);
+    }
+}
+
+[HarmonyPatch(typeof(RoundDirector), "HaulCheck")]
+public class RoundDirectorHaulCheckPatch {
+    private static void Prefix(RoundDirector __instance) {
+        if (!SemiFunc.IsMasterClientOrSingleplayer()) return;
+
+        // Heart of Gold follows the player's live RoomVolumeCheck in ExtractionPoint's haul display.
+        // Keep it out of the game's separate valuable-object tally, which checks the attached component's
+        // RoomVolumeCheck and can disagree with the player's zone state.
+        __instance.dollarHaulList.RemoveAll(gameObject =>
+            gameObject && gameObject.TryGetComponent<ValuableObject>(out var valuableObject) &&
+            valuableObject && ExtractionPointDestroyPatch.IsGoldenHeartValuable(valuableObject));
+    }
+
+    private static void Postfix(RoundDirector __instance) {
+        ExtractionPointDestroyPatch.AddPlayerHeartValueToCurrentHaul(__instance);
     }
 }
