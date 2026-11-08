@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -55,7 +56,7 @@ public class InventorySlotUpgrade : UpgradeBase<int> {
         _ => null
     };
 
-    public override int Calculate(int value, PlayerAvatar player, int level) {
+    public override int Calculate(int value, PlayerAvatar? player, int level) {
         return value + level;
     }
 
@@ -180,9 +181,11 @@ public class InventoryUIStartPatch {
     internal static void Postfix(InventoryUI __instance) {
         var inventorySlotUpgrade = SLRUpgradePack.InventorySlotUpgradeInstance;
         inventorySlotUpgrade.UIRef = __instance;
-        if (inventorySlotUpgrade.UpgradeEnabled.Value && inventorySlotUpgrade.BoundPlayer != null) {
+        var upgradeRegister = inventorySlotUpgrade.UpgradeRegister;
+        var boundPlayer = inventorySlotUpgrade.BoundPlayer;
+        if (inventorySlotUpgrade.UpgradeEnabled.Value && boundPlayer != null && upgradeRegister != null) {
             var slots = inventorySlotUpgrade.Calculate(3, SemiFunc.PlayerAvatarLocal(),
-                inventorySlotUpgrade.UpgradeRegister.GetLevel(inventorySlotUpgrade.BoundPlayer));
+                upgradeRegister.GetLevel(boundPlayer));
 
             if (slots > 3) {
                 SLRUpgradePack.Logger.LogInfo($"Redrawing for {slots} slots");
@@ -625,9 +628,11 @@ public class InventoryStartPatch {
     internal static void Postfix(Inventory __instance) {
         var inventorySlotUpgrade = SLRUpgradePack.InventorySlotUpgradeInstance;
         inventorySlotUpgrade.InventoryRef = __instance;
-        if (inventorySlotUpgrade.UpgradeEnabled.Value && inventorySlotUpgrade.BoundPlayer != null) {
+        var upgradeRegister = inventorySlotUpgrade.UpgradeRegister;
+        var boundPlayer = inventorySlotUpgrade.BoundPlayer;
+        if (inventorySlotUpgrade.UpgradeEnabled.Value && boundPlayer != null && upgradeRegister != null) {
             var extraSlots = inventorySlotUpgrade.Calculate(3, SemiFunc.PlayerAvatarLocal(),
-                inventorySlotUpgrade.UpgradeRegister.GetLevel(inventorySlotUpgrade.BoundPlayer));
+                upgradeRegister.GetLevel(boundPlayer));
 
             SLRUpgradePack.Logger.LogInfo($"Player has {extraSlots} slots");
             while (inventorySpots.Invoke(__instance).Count < extraSlots)
@@ -651,17 +656,108 @@ public class InventoryStartPatch {
     }
 }
 
+internal sealed class InventorySlotRequestValidationContext {
+    internal int RequestedSlotIndex { get; }
+    internal int AllowedSlotCount { get; }
+    internal bool NeedsInventoryList { get; set; } = true;
+
+    internal InventorySlotRequestValidationContext(int requestedSlotIndex, int allowedSlotCount) {
+        RequestedSlotIndex = requestedSlotIndex;
+        AllowedSlotCount = allowedSlotCount;
+    }
+}
+
+internal static class InventorySlotRequestValidation {
+    [ThreadStatic]
+    private static InventorySlotRequestValidationContext? _current;
+
+    internal static InventorySlotRequestValidationContext? Begin(int requestedSlotIndex,
+        int requesterPhotonViewId) {
+        var previous = _current;
+        _current = CreateContext(requestedSlotIndex, requesterPhotonViewId);
+        return previous;
+    }
+
+    internal static void Restore(InventorySlotRequestValidationContext? previous) => _current = previous;
+
+    internal static bool TryOverrideInventoryList(List<InventorySpot> original,
+        out List<InventorySpot> validationList) {
+        validationList = original;
+        var context = _current;
+        if (context == null || !context.NeedsInventoryList) return false;
+
+        // RPC_RequestEquip calls GetAllSpots once for its range check. Consume the context here so
+        // any nested inventory queries by the original RPC continue to see the real host inventory.
+        context.NeedsInventoryList = false;
+        if (original.Count == context.AllowedSlotCount) return false;
+
+        validationList = new List<InventorySpot>(context.AllowedSlotCount);
+        for (var i = 0; i < context.AllowedSlotCount; i++)
+            validationList.Add(null!);
+
+        if (context.RequestedSlotIndex >= original.Count &&
+            context.RequestedSlotIndex < context.AllowedSlotCount) {
+            SLRUpgradePack.Logger.LogDebug(
+                $"Validating remote inventory slot {context.RequestedSlotIndex} against the requester's " +
+                $"{context.AllowedSlotCount}-slot capacity (host list has {original.Count}).");
+        }
+
+        return true;
+    }
+
+    private static InventorySlotRequestValidationContext? CreateContext(int requestedSlotIndex,
+        int requesterPhotonViewId) {
+        if (!SemiFunc.IsMultiplayer()) return null;
+
+        var player = SemiFunc.PlayerAvatarGetFromPhotonID(requesterPhotonViewId);
+        var upgrade = SLRUpgradePack.InventorySlotUpgradeInstance;
+        if (!player || !player.photonView || player.photonView.IsMine || upgrade == null ||
+            !upgrade.UpgradeEnabled.Value || upgrade.UpgradeRegister == null)
+            return null;
+
+        var level = upgrade.UpgradeRegister.GetLevel(player);
+        return new InventorySlotRequestValidationContext(requestedSlotIndex,
+            upgrade.Calculate(3, player, level));
+    }
+}
+
+[HarmonyPatch(typeof(ItemEquippable), "RPC_RequestEquip")]
+internal static class InventorySlotEquipRequestValidationPatch {
+    [HarmonyPrefix]
+    private static void Prefix(int spotIndex, int physGrabberPhotonViewID,
+        out InventorySlotRequestValidationContext? __state) {
+        __state = InventorySlotRequestValidation.Begin(spotIndex, physGrabberPhotonViewID);
+    }
+
+    [HarmonyFinalizer]
+    private static Exception? Finalizer(Exception? __exception, InventorySlotRequestValidationContext? __state) {
+        InventorySlotRequestValidation.Restore(__state);
+        return __exception;
+    }
+}
+
+[HarmonyPatch(typeof(Inventory), nameof(Inventory.GetAllSpots))]
+internal static class InventorySlotValidationListPatch {
+    [HarmonyPostfix]
+    private static void Postfix(ref List<InventorySpot> __result) {
+        if (InventorySlotRequestValidation.TryOverrideInventoryList(__result, out var validationList))
+            __result = validationList;
+    }
+}
+
 [HarmonyPatch(typeof(InventorySpot), "Update")]
 public class InventorySpotUpdatePatch {
     private static readonly MethodInfo HandleInputMethod = Method(typeof(InventorySpot), "HandleInput");
 
     private static void Postfix(InventorySpot __instance) {
         var inventorySlotUpgrade = SLRUpgradePack.InventorySlotUpgradeInstance;
-        if (!inventorySlotUpgrade.UpgradeEnabled.Value || inventorySlotUpgrade.BoundPlayer == null) return;
+        var upgradeRegister = inventorySlotUpgrade.UpgradeRegister;
+        var boundPlayer = inventorySlotUpgrade.BoundPlayer;
+        if (!inventorySlotUpgrade.UpgradeEnabled.Value || boundPlayer == null || upgradeRegister == null) return;
 
         var index = __instance.inventorySpotIndex;
         if (index < 3 || index >= inventorySlotUpgrade.Calculate(3, SemiFunc.PlayerAvatarLocal(),
-                inventorySlotUpgrade.UpgradeRegister.GetLevel(inventorySlotUpgrade.BoundPlayer))) return;
+                upgradeRegister.GetLevel(boundPlayer))) return;
 
         var slotBinding = inventorySlotUpgrade.GetSlotBinding(index);
         if (slotBinding == null) return;

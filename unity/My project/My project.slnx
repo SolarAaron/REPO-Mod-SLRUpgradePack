@@ -1,0 +1,12 @@
+﻿<Solution>
+  <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="PhotonVoice.API.csproj" />
+  <Project Path="PhotonVoice.csproj" />
+  <Project Path="PhotonRealtime.csproj" />
+  <Project Path="PhotonUnityNetworking.csproj" />
+  <Project Path="PhotonChat.csproj" />
+  <Project Path="Photon3Unity3D.csproj" />
+  <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="PhotonUnityNetworking.Utilities.csproj" />
+  <Project Path="PhotonVoice.PUN.csproj" />
+</Solution>

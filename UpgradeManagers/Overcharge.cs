@@ -12,7 +12,7 @@ public class OverchargeUpgrade : UpgradeBase<float> {
             upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, true, true,
             ((int?)null)) { }
 
-    public override float Calculate(float value, PlayerAvatar player, int level) =>
+    public override float Calculate(float value, PlayerAvatar? player, int level) =>
         DefaultCalculateFloatReduce(this, "Overcharge", value, player, level);
 }
 
@@ -40,9 +40,10 @@ public class PhysGrabberPatch {
     }
 
     private static bool TryGetUpgradeLevel(PhysGrabber instance, out OverchargeUpgrade upgrade, out int level) {
-        upgrade = SLRUpgradePack.OverchargeUpgradeInstance;
+        var overchargeUpgrade = SLRUpgradePack.OverchargeUpgradeInstance;
+        upgrade = overchargeUpgrade!;
         level = 0;
-        if (!instance || !instance.playerAvatar || upgrade == null || !upgrade.UpgradeEnabled.Value ||
+        if (!instance || !instance.playerAvatar || overchargeUpgrade == null || !upgrade.UpgradeEnabled.Value ||
             upgrade.UpgradeRegister == null) return false;
 
         try {

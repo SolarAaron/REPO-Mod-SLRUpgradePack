@@ -5,14 +5,14 @@
         <LangVersion>12</LangVersion>
         <Nullable>enable</Nullable>
         <Authors>SolarAaron</Authors>
-        <Version>0.6.0</Version>
+        <Version>0.6.2</Version>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
     <!-- Add Package Sources -->
     <PropertyGroup>
         <EnableGameReferences>true</EnableGameReferences>
-        <DefaultItemExcludes>$(DefaultItemExcludes);Assets/**</DefaultItemExcludes>
+        <DefaultItemExcludes>$(DefaultItemExcludes);Assets/**;unity/**</DefaultItemExcludes>
     </PropertyGroup>
     <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
         <DebugSymbols>false</DebugSymbols>

@@ -1,0 +1,84 @@
+ManifestFileVersion: 0
+UnityVersion: 6000.3.17f1
+CRC: 1344491068
+HashAppended: 0
+AssetBundleManifest:
+  AssetBundleInfos:
+    Info_0:
+      Name: unifiedraytracing
+      Dependencies: {}
+    Info_1:
+      Name: 3cab79de7e8e1979d0c38ab78b884498
+      Dependencies: {}
+    Info_2:
+      Name: 44d33366bbccd4095efcd490108d591c
+      Dependencies: {}
+    Info_3:
+      Name: a0f31398c94d9a51eb34a1c298245063
+      Dependencies: {}
+    Info_4:
+      Name: 715e3f7137667659d546e752b1d7db68
+      Dependencies: {}
+    Info_5:
+      Name: b40ac65c92f4f83ebb9a7af614aee436
+      Dependencies: {}
+    Info_6:
+      Name: d127ea709154674947c6acdab7d74a47
+      Dependencies: {}
+    Info_7:
+      Name: 320f97dc439504e03e197b2864094877
+      Dependencies: {}
+    Info_8:
+      Name: 8891d9dbe72cc20b84cca2332e2bffce
+      Dependencies: {}
+    Info_9:
+      Name: 2f0ef5bfcc1bd46d0ce655151982a990
+      Dependencies: {}
+    Info_10:
+      Name: aa3df974b5c97f83cdac051f18f5cf0a
+      Dependencies: {}
+    Info_11:
+      Name: c75f1e11fbf4423be1a7483de706e974
+      Dependencies: {}
+    Info_12:
+      Name: b53b8e9c4da00b1dfaa5d21828421589
+      Dependencies: {}
+    Info_13:
+      Name: 9691377b9c4c12108becc9364d04d472
+      Dependencies: {}
+    Info_14:
+      Name: 11d5616321c230e4564215d65dbecbdc
+      Dependencies: {}
+    Info_15:
+      Name: 4931760e75b510a30008dcef8b89eb47
+      Dependencies: {}
+    Info_16:
+      Name: cddb396227d21e4bc5abd5de605fb08a
+      Dependencies: {}
+    Info_17:
+      Name: c3175962a0fb69b1cffb572da4140261
+      Dependencies: {}
+    Info_18:
+      Name: 9462e40ef3c2466ffdfb29069c32f7bc
+      Dependencies: {}
+    Info_19:
+      Name: 7cd7110233b4b16ebfd714e14b237741
+      Dependencies: {}
+    Info_20:
+      Name: 07db924076bf8db2d7f863ddf128e405
+      Dependencies: {}
+    Info_21:
+      Name: 5917094c15c28c8a1de152748b7fd3af
+      Dependencies: {}
+    Info_22:
+      Name: 7a21a2ccd2f340ddbde7f76caa780bcb
+      Dependencies: {}
+    Info_23:
+      Name: 00485ce48d70adda620a0448a1cdee1e
+      Dependencies: {}
+    Info_24:
+      Name: 2c1ee0fc6f26f69589ceb08f9dbdede8
+      Dependencies: {}
+    Info_25:
+      Name: slr_assets
+      Dependencies: {}

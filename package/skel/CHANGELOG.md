@@ -1,3 +1,9 @@
+# v0.6.1
+
+* Added Safe Trigger, which can preserve health packs, revive items, grenades, and mines as well as battery charges
+* Fixed inventory slots disabled on clients with higher levels than the host
+* Regeneration rewrite (again)
+
 # v0.6.0
 
 * Confirmed build against REPO 0.5 update + REPOLib 4.3.0

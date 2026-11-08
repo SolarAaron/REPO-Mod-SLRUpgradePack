@@ -70,7 +70,7 @@ public class ExtraLifeUpgrade : UpgradeBase<float> {
             "Percentage of health to recover when revived");
     }
 
-    public override float Calculate(float value, PlayerAvatar player, int level) =>
+    public override float Calculate(float value, PlayerAvatar? player, int level) =>
         DefaultCalculateFloatIncrease(this, "ExtraLife", value, player, level);
 
     internal override void InitUpgrade(PlayerAvatar player, int level) {
@@ -134,7 +134,8 @@ public class ExtraLifeUpgrade : UpgradeBase<float> {
             // Extraction's dead-head trigger/zone state can be established just after the death RPC.
             // Let that state settle before spending a life that the extraction point can replace for free.
             yield return new WaitForSeconds(0.2f);
-            if (!player || !player.playerHealth || !UpgradeEnabled.Value || UpgradeRegister.GetLevel(player) == 0 ||
+            if (!player || !player.playerHealth || !UpgradeEnabled.Value || UpgradeRegister == null ||
+                UpgradeRegister.GetLevel(player) == 0 ||
                 !_deadSetRef.Invoke(player) || _healthRef.Invoke(player.playerHealth) != 0)
                 yield break;
 

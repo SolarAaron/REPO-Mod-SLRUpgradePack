@@ -12,7 +12,7 @@ public class ObjectDurabilityUpgrade : UpgradeBase<float> {
             upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, true, true,
             ((int?)null)) { }
 
-    public override float Calculate(float damage, PlayerAvatar player, int level) =>
+    public override float Calculate(float damage, PlayerAvatar? player, int level) =>
         DefaultCalculateFloatReduce(this, "ObjectDurability", damage, player, level);
 }
 

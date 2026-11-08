@@ -15,6 +15,7 @@ using Object = UnityEngine.Object;
 namespace SLRUpgradePack.UpgradeManagers;
 
 public class HeartOfGoldUpgrade : UpgradeBase<float> {
+    internal const byte ViewRegistrationMessageType = 0;
     internal const byte RegistrationAckMessageType = 1;
 
     public ConfigEntry<float> BaseHeartValue { get; protected set; }
@@ -35,14 +36,21 @@ public class HeartOfGoldUpgrade : UpgradeBase<float> {
             return;
         }
 
-        if (data.MessageType != 0 || string.IsNullOrEmpty(data.PlayerId) || !data.PhotonId.HasValue) return;
+        if (data.MessageType != ViewRegistrationMessageType || string.IsNullOrEmpty(data.PlayerId) ||
+            !data.PhotonId.HasValue) return;
 
         var player = SemiFunc.PlayerAvatarGetFromSteamID(data.PlayerId!);
-        if (!player) return;
+        if (!player || !player.photonView || player.photonView.OwnerActorNr != e.Sender) {
+            SLRUpgradePack.Logger.LogWarning(
+                $"Ignoring Heart of Gold view registration for '{data.PlayerId}' from non-owner actor {e.Sender}.");
+            return;
+        }
+        var upgradeRegister = heartOfGoldUpgradeInstance.UpgradeRegister;
+        if (upgradeRegister == null) return;
 
         if (!heartOfGoldUpgradeInstance.GoldenHearts.TryGetValue(data.PlayerId!, out var heart) || !heart) {
             heartOfGoldUpgradeInstance.InitUpgrade(player,
-                heartOfGoldUpgradeInstance.UpgradeRegister.GetLevel(player));
+                upgradeRegister.GetLevel(player));
             heart = heartOfGoldUpgradeInstance.GoldenHearts[data.PlayerId!];
         }
 
@@ -66,7 +74,7 @@ public class HeartOfGoldUpgrade : UpgradeBase<float> {
             config.Bind("Heart Of Gold Upgrade", "Base Value", baseValue, "Base value to scale by player health");
     }
 
-    public override float Calculate(float value, PlayerAvatar player, int level) =>
+    public override float Calculate(float value, PlayerAvatar? player, int level) =>
         DefaultCalculateFloatIncrease(this, "HeartOfGold", value, player, level);
 
     internal override void InitUpgrade(PlayerAvatar player, int level) {
@@ -99,7 +107,7 @@ public class HeartOfGoldUpgrade : UpgradeBase<float> {
 public class GoldenHeart : MonoBehaviour {
     private const float RegistrationRetryInterval = 1f;
 
-    internal PlayerAvatar player { get; set; }
+    internal PlayerAvatar player { get; set; } = null!;
     internal bool Pause { get; set; }
     internal float NextExtractionZoneRefreshTime { get; set; }
     internal int lastLevel { get; set; } = -1;
@@ -114,10 +122,13 @@ public class GoldenHeart : MonoBehaviour {
     private float queuedFinalBaseValue;
     private float queuedFinalValue;
     private float nextRegistrationRetryTime;
+    private bool missingRpcViewWarningLogged;
+    private bool viewAllocationFailureLogged;
+    private bool registrationReadyLogged;
     private readonly HashSet<int> registeredActorNumbers = new();
     private readonly HashSet<int> knownRemoteActorNumbers = new();
 
-    private PhotonView photonView;
+    private PhotonView photonView = null!;
     private readonly FieldRef<PlayerHealth, int> _healthRef = FieldRefAccess<PlayerHealth, int>("health");
     private readonly FieldRef<ValuableObject, PhysAttribute> _physAttributePresetRef =
         FieldRefAccess<ValuableObject, PhysAttribute>("physAttributePreset");
@@ -133,10 +144,23 @@ public class GoldenHeart : MonoBehaviour {
         }
     }
 
+    private bool CanSendPhotonRpc(string methodName) {
+        if (photonView && photonView.ViewID != 0) return true;
+
+        if (!missingRpcViewWarningLogged) {
+            missingRpcViewWarningLogged = true;
+            SLRUpgradePack.Logger.LogWarning(
+                $"Skipping Heart of Gold RPC {methodName} for {SemiFunc.PlayerGetName(player)} because its PhotonView has no registered ID.");
+        }
+
+        return false;
+    }
+
     public void DestroyOnlyMe() {
         if (!ValuableComponent && !createRequested) return;
 
-        if (SemiFunc.IsMultiplayer()) photonView.RPC("DestroyOnlyMeRPC", RpcTarget.All);
+        if (SemiFunc.IsMultiplayer() && CanSendPhotonRpc(nameof(DestroyOnlyMeRPC)))
+            photonView.RPC(nameof(DestroyOnlyMeRPC), RpcTarget.All);
         else DestroyOnlyMeRPC();
     }
 
@@ -161,6 +185,8 @@ public class GoldenHeart : MonoBehaviour {
     public void CreateOnlyMe() {
         if (ValuableComponent || createRpcPending || createRequested || Pause) return;
 
+        if (SemiFunc.IsMultiplayer() && !CanSendPhotonRpc(nameof(CreateOnlyMeRPC))) return;
+
         createRpcPending = true;
         if (SemiFunc.IsMultiplayer()) photonView.RPC(nameof(CreateOnlyMeRPC), RpcTarget.All);
         else CreateOnlyMeRPC();
@@ -182,8 +208,19 @@ public class GoldenHeart : MonoBehaviour {
         if (!createRequested || Pause || !player || !player.healthGrab || !player.playerHealth || ValuableComponent) return;
 
         var heartOfGoldUpgrade = SLRUpgradePack.HeartOfGoldUpgradeInstance;
+        var upgradeRegister = heartOfGoldUpgrade.UpgradeRegister;
+        if (upgradeRegister == null) return;
 
-        SLRUpgradePack.Logger.LogInfo($"Adding valuable component to player {SemiFunc.PlayerGetName(player)}");
+        var pv = player.healthGrab.GetComponent<PhotonView>();
+        if (!pv) {
+            SLRUpgradePack.Logger.LogError(
+                $"Player health-grab object for {SemiFunc.PlayerGetName(player)} has no PhotonView; cannot add Heart of Gold physics components.");
+            return;
+        }
+        if (SemiFunc.IsMultiplayer() && pv.ViewID == 0) return;
+
+        SLRUpgradePack.Logger.LogInfo(
+            $"Adding valuable component to player {SemiFunc.PlayerGetName(player)} using PhotonView {pv.ViewID}");
 
         ValuableComponent = player.healthGrab.gameObject.AddComponent<ValuableObject>();
         ValuableObjectValuePatch.MarkExcludedFromExtractionGoal(ValuableComponent);
@@ -196,7 +233,7 @@ public class GoldenHeart : MonoBehaviour {
             ValuableComponent.valuePreset.valueMax =
                 heartOfGoldUpgrade.Calculate(
                     _healthRef.Invoke(player.playerHealth) * heartOfGoldUpgrade.BaseHeartValue.Value,
-                    player, heartOfGoldUpgrade.UpgradeRegister.GetLevel(player));
+                    player, upgradeRegister.GetLevel(player));
 
         ValuableComponent.durabilityPreset = ScriptableObject.CreateInstance<Durability>();
         ValuableComponent.durabilityPreset.durability = 999;
@@ -209,9 +246,9 @@ public class GoldenHeart : MonoBehaviour {
         var ptv = ValuableComponent.gameObject.AddComponent<PhotonTransformView>();
         var pgoid = ValuableComponent.gameObject.AddComponent<PhysGrabObjectImpactDetector>();
         var pgo = ValuableComponent.gameObject.AddComponent<PhysGrabObject>();
-        var pv = ValuableComponent.gameObject.AddComponent<PhotonView>();
-
-        pv.ObservedComponents = [pgo, pgoid, ptv];
+        if (!pv.ObservedComponents.Contains(pgo)) pv.ObservedComponents.Add(pgo);
+        if (!pv.ObservedComponents.Contains(pgoid)) pv.ObservedComponents.Add(pgoid);
+        if (!pv.ObservedComponents.Contains(ptv)) pv.ObservedComponents.Add(ptv);
         pgoid.enabled = false;
         pgo.enabled = false;
         pgo.transform.localScale = Vector3.zero;
@@ -255,11 +292,15 @@ public class GoldenHeart : MonoBehaviour {
         if (!player.playerHealth) return;
 
         var heartOfGoldUpgrade = SLRUpgradePack.HeartOfGoldUpgradeInstance;
+        var upgradeRegister = heartOfGoldUpgrade.UpgradeRegister;
 
-        if (!heartOfGoldUpgrade.UpgradeEnabled.Value) return;
+        if (!heartOfGoldUpgrade.UpgradeEnabled.Value || upgradeRegister == null) return;
         if (Pause) return;
-        var currentLevel = heartOfGoldUpgrade.UpgradeRegister.GetLevel(player);
+        var currentLevel = upgradeRegister.GetLevel(player);
         if (currentLevel == 0) return;
+
+        // Register this runtime PhotonView on every peer before any RPC or valuable creation.
+        if (SemiFunc.IsMultiplayer() && !EnsureRemoteViewsRegistered()) return;
 
         // Heart of Gold is a player-bound valuable; its creation and value must not wait for
         // extraction-point discovery, which can happen much later than player initialization.
@@ -277,22 +318,32 @@ public class GoldenHeart : MonoBehaviour {
 
         var heartValue = heartOfGoldUpgrade.Calculate(
             currentHealth * heartOfGoldUpgrade.BaseHeartValue.Value, player, currentLevel);
-        if (SemiFunc.IsMultiplayer() && !EnsureRemoteViewsRegistered()) return;
 
         if (!valueSyncPending) return;
 
         if (!SemiFunc.IsMultiplayer()) ApplyHeartValue(heartValue);
-        else photonView.RPC(nameof(UpdateOnlyMeRPC), RpcTarget.MasterClient, heartValue);
+        else if (CanSendPhotonRpc(nameof(UpdateOnlyMeRPC)))
+            photonView.RPC(nameof(UpdateOnlyMeRPC), RpcTarget.MasterClient, heartValue);
         valueSyncPending = false;
     }
 
     private bool EnsureRemoteViewsRegistered() {
+        if (!PhotonNetwork.InRoom) return false;
+
         if (photonView.ViewID == 0) {
-            PhotonNetwork.AllocateViewID(photonView);
-            if (photonView.ViewID == 0) return false;
+            if (!PhotonNetwork.AllocateViewID(photonView) || photonView.ViewID == 0) {
+                if (!viewAllocationFailureLogged) {
+                    viewAllocationFailureLogged = true;
+                    SLRUpgradePack.Logger.LogWarning(
+                        $"Heart of Gold could not allocate a PhotonView ID for {SemiFunc.PlayerGetName(player)}; delaying its RPCs.");
+                }
+
+                return false;
+            }
 
             registeredActorNumbers.Clear();
             knownRemoteActorNumbers.Clear();
+            registrationReadyLogged = false;
         }
 
         var remoteActorNumbers = PhotonNetwork.PlayerListOthers
@@ -304,14 +355,24 @@ public class GoldenHeart : MonoBehaviour {
             knownRemoteActorNumbers.UnionWith(remoteActorNumbers);
             registeredActorNumbers.IntersectWith(remoteActorNumbers);
             valueSyncPending = true;
+            registrationReadyLogged = false;
         }
 
-        if (remoteActorNumbers.All(registeredActorNumbers.Contains)) return true;
+        if (remoteActorNumbers.All(registeredActorNumbers.Contains)) {
+            if (!registrationReadyLogged) {
+                registrationReadyLogged = true;
+                SLRUpgradePack.Logger.LogInfo(
+                    $"Heart of Gold PhotonView {photonView.ViewID} registered for {SemiFunc.PlayerGetName(player)} on {remoteActorNumbers.Count} remote peer(s).");
+            }
+
+            return true;
+        }
         if (Time.unscaledTime < nextRegistrationRetryTime) return false;
 
         var eventContent = new NetworkMessage {
             PlayerId = SemiFunc.PlayerGetSteamID(player),
-            PhotonId = photonView.ViewID
+            PhotonId = photonView.ViewID,
+            MessageType = HeartOfGoldUpgrade.ViewRegistrationMessageType
         };
         HeartOfGoldUpgrade.HeartOfGoldEvent.RaiseEvent(NetworkMessage.ToByteArray(eventContent),
             NetworkingEvents.RaiseOthers, SendOptions.SendReliable);
@@ -332,6 +393,8 @@ public class GoldenHeart : MonoBehaviour {
     }
 
     private void ApplyHeartValue(float baseValue) {
+        if (!player || !player.playerHealth) return;
+
         var valuableComponent = ValuableComponent;
         if (valuableComponent == null || !valuableComponent) {
             queuedMasterBaseValue = baseValue;
@@ -355,11 +418,14 @@ public class GoldenHeart : MonoBehaviour {
         valuableComponent.valuePreset.valueMin = baseValue;
         valuableComponent.valuePreset.valueMax = baseValue;
 
+        var upgradeRegister = SLRUpgradePack.HeartOfGoldUpgradeInstance.UpgradeRegister;
+        var currentLevel = upgradeRegister?.GetLevel(player) ?? 0;
         SLRUpgradePack.Logger.LogInfo(
-            $"Heart of Gold value updated for {SemiFunc.PlayerGetName(player)}: base={baseValue}, final={finalValue}, health={_healthRef.Invoke(player.playerHealth)}, level={SLRUpgradePack.HeartOfGoldUpgradeInstance.UpgradeRegister.GetLevel(player)}");
+            $"Heart of Gold value updated for {SemiFunc.PlayerGetName(player)}: base={baseValue}, final={finalValue}, health={_healthRef.Invoke(player.playerHealth)}, level={currentLevel}");
 
         if (!SemiFunc.IsMultiplayer()) HeartOfGoldValueSetRPC(baseValue, finalValue);
-        else photonView.RPC(nameof(HeartOfGoldValueSetRPC), RpcTarget.All, baseValue, finalValue);
+        else if (CanSendPhotonRpc(nameof(HeartOfGoldValueSetRPC)))
+            photonView.RPC(nameof(HeartOfGoldValueSetRPC), RpcTarget.All, baseValue, finalValue);
     }
 
     [PunRPC]
@@ -391,7 +457,9 @@ public class GoldenHeart : MonoBehaviour {
 
     public void PauseLogic(bool pause) {
         if (!SemiFunc.IsMultiplayer()) PauseLogicRPC(pause);
-        else photonView.RPC("PauseLogicRPC", RpcTarget.All, pause);
+        else if (CanSendPhotonRpc(nameof(PauseLogicRPC)))
+            photonView.RPC(nameof(PauseLogicRPC), RpcTarget.All, pause);
+        else PauseLogicRPC(pause);
     }
 
     [PunRPC]
@@ -402,9 +470,16 @@ public class GoldenHeart : MonoBehaviour {
     internal bool SetViewId(int id) {
         if (id <= 0 || !photonView) return false;
 
+        var existingView = PhotonView.Find(id);
+        if (existingView && existingView != photonView) {
+            SLRUpgradePack.Logger.LogWarning(
+                $"Could not register Heart of Gold view {id} for {SemiFunc.PlayerGetName(player)}; that ID is already assigned to {existingView.gameObject.name}.");
+            return false;
+        }
+
         if (photonView.ViewID != id) {
             photonView.ViewID = id;
-            if (player && player.photonView)
+            if (player && player.photonView && player.photonView.Owner != null)
                 photonView.TransferOwnership(player.photonView.Owner);
         }
 

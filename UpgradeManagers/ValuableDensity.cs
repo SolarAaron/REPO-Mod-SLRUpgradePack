@@ -11,15 +11,15 @@ using static HarmonyLib.AccessTools;
 namespace SLRUpgradePack.UpgradeManagers;
 
 public class ValuableDensityUpgrade : UpgradeBase<float> {
-    public List<AnimationCurve> TotalMaxAmountCurves { get; set; }
-    public List<AnimationCurve> TotalMaxValueCurves { get; set; }
-    public List<AnimationCurve> TinyCurves { get; set; }
-    public List<AnimationCurve> SmallCurves { get; set; }
-    public List<AnimationCurve> MediumCurves { get; set; }
-    public List<AnimationCurve> BigCurves { get; set; }
-    public List<AnimationCurve> WideCurves { get; set; }
-    public List<AnimationCurve> TallCurves { get; set; }
-    public List<AnimationCurve> VeryTallCurves { get; set; }
+    public List<AnimationCurve> TotalMaxAmountCurves { get; set; } = new();
+    public List<AnimationCurve> TotalMaxValueCurves { get; set; } = new();
+    public List<AnimationCurve> TinyCurves { get; set; } = new();
+    public List<AnimationCurve> SmallCurves { get; set; } = new();
+    public List<AnimationCurve> MediumCurves { get; set; } = new();
+    public List<AnimationCurve> BigCurves { get; set; } = new();
+    public List<AnimationCurve> WideCurves { get; set; } = new();
+    public List<AnimationCurve> TallCurves { get; set; } = new();
+    public List<AnimationCurve> VeryTallCurves { get; set; } = new();
 
     public ValuableDensityUpgrade(bool enabled, float upgradeAmount, bool exponential, float exponentialAmount,
         ConfigFile config, AssetBundle assetBundle, float priceMultiplier) :
@@ -28,7 +28,7 @@ public class ValuableDensityUpgrade : UpgradeBase<float> {
             upgradeAmount, exponential, exponentialAmount, config, assetBundle, priceMultiplier, true, true,
             ((int?)null)) { }
 
-    public override float Calculate(float value, PlayerAvatar player, int level) =>
+    public override float Calculate(float value, PlayerAvatar? player, int level) =>
         DefaultCalculateFloatIncrease(this, "ValuableDensity", value, player, level);
 
     internal int GetTotalConnectedPlayerLevels() {
@@ -57,6 +57,11 @@ public class LevelGeneratorPatch {
     private static void Prefix(LevelGenerator __instance) {
         var valuableDensityUpgrade = SLRUpgradePack.ValuableDensityUpgradeInstance;
         if (SemiFunc.IsMasterClientOrSingleplayer() && valuableDensityUpgrade.UpgradeEnabled.Value) {
+            if (TotalMaxAmountRef == null || !ValuableDirector.instance) {
+                SLRUpgradePack.Logger.LogWarning("Valuable Density could not find the ValuableDirector total item count field; skipping this level setup.");
+                return;
+            }
+
             SLRUpgradePack.Logger.LogInfo("Valuable Density Upgrade runs HERE");
 
             if (!initialized) {

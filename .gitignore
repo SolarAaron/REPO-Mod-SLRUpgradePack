@@ -11,8 +11,8 @@
 # Datasource local storage ignored files
 /dataSources/
 /dataSources.local.xml
-/Assets/REPO/Game
-/Assets/REPO/Plugins
+/unity/My project/Assets/REPO/Game
+/unity/My project/Assets/REPO/Plugins
 /bin
 /obj
 /package/skel/plugins/
@@ -20,9 +20,68 @@
 /Directory.Repo.props
 /Folder.DotSettings.user
 /SLRUpgradePack.csproj.DotSettings
-/Assets/TextMesh Pro/
-/Assets/REPO/Game.meta
-/Assets/REPO/Plugins.meta
-/Assets/REPO/Mods/moreupgrades.dump/
-/Assets/AssetBundles/moreupgrades
-/Assets/AssetBundles/moreupgrades.meta
+/unity/My project/Assets/TextMesh Pro/
+/unity/My project/Assets/REPO/Game.meta
+/unity/My project/Assets/REPO/Plugins.meta
+/unity/My project/Assets/REPO/Mods/moreupgrades.dump/
+/unity/My project/Assets/AssetBundles/moreupgrades
+/unity/My project/Assets/AssetBundles/moreupgrades.meta
+/unity/My project/AssetRipperOutput/
+/unity/My project/AssetRipper/
+/unity/My project/Packages/
+/unity/My project/Logs/
+/unity/My project/steps-results.json
+/unity/My project/.vsconfig
+/unity/My project/.gitignore
+/unity/My project/Temp/
+/unity/My project/ProjectSettings/
+/unity/My project/UserSettings/
+/unity/My project/Library/
+/unity/My project/Assets/AssetBundles/2c1ee0fc6f26f69589ceb08f9dbdede8
+/unity/My project/Assets/AssetBundles/2c1ee0fc6f26f69589ceb08f9dbdede8.manifest
+/unity/My project/Assets/AssetBundles/2f0ef5bfcc1bd46d0ce655151982a990
+/unity/My project/Assets/AssetBundles/2f0ef5bfcc1bd46d0ce655151982a990.manifest
+/unity/My project/Assets/AssetBundles/3cab79de7e8e1979d0c38ab78b884498
+/unity/My project/Assets/AssetBundles/3cab79de7e8e1979d0c38ab78b884498.manifest
+/unity/My project/Assets/AssetBundles/7a21a2ccd2f340ddbde7f76caa780bcb
+/unity/My project/Assets/AssetBundles/7a21a2ccd2f340ddbde7f76caa780bcb.manifest
+/unity/My project/Assets/AssetBundles/7cd7110233b4b16ebfd714e14b237741
+/unity/My project/Assets/AssetBundles/7cd7110233b4b16ebfd714e14b237741.manifest
+/unity/My project/Assets/AssetBundles/07db924076bf8db2d7f863ddf128e405
+/unity/My project/Assets/AssetBundles/07db924076bf8db2d7f863ddf128e405.manifest
+/unity/My project/Assets/AssetBundles/11d5616321c230e4564215d65dbecbdc
+/unity/My project/Assets/AssetBundles/11d5616321c230e4564215d65dbecbdc.manifest
+/unity/My project/Assets/AssetBundles/44d33366bbccd4095efcd490108d591c
+/unity/My project/Assets/AssetBundles/44d33366bbccd4095efcd490108d591c.manifest
+/unity/My project/Assets/AssetBundles/320f97dc439504e03e197b2864094877
+/unity/My project/Assets/AssetBundles/320f97dc439504e03e197b2864094877.manifest
+/unity/My project/Assets/AssetBundles/00485ce48d70adda620a0448a1cdee1e
+/unity/My project/Assets/AssetBundles/00485ce48d70adda620a0448a1cdee1e.manifest
+/unity/My project/Assets/AssetBundles/715e3f7137667659d546e752b1d7db68
+/unity/My project/Assets/AssetBundles/715e3f7137667659d546e752b1d7db68.manifest
+/unity/My project/Assets/AssetBundles/8891d9dbe72cc20b84cca2332e2bffce
+/unity/My project/Assets/AssetBundles/8891d9dbe72cc20b84cca2332e2bffce.manifest
+/unity/My project/Assets/AssetBundles/9462e40ef3c2466ffdfb29069c32f7bc
+/unity/My project/Assets/AssetBundles/9462e40ef3c2466ffdfb29069c32f7bc.manifest
+/unity/My project/Assets/AssetBundles/4931760e75b510a30008dcef8b89eb47
+/unity/My project/Assets/AssetBundles/4931760e75b510a30008dcef8b89eb47.manifest
+/unity/My project/Assets/AssetBundles/5917094c15c28c8a1de152748b7fd3af
+/unity/My project/Assets/AssetBundles/5917094c15c28c8a1de152748b7fd3af.manifest
+/unity/My project/Assets/AssetBundles/9691377b9c4c12108becc9364d04d472
+/unity/My project/Assets/AssetBundles/9691377b9c4c12108becc9364d04d472.manifest
+/unity/My project/Assets/AssetBundles/a0f31398c94d9a51eb34a1c298245063
+/unity/My project/Assets/AssetBundles/a0f31398c94d9a51eb34a1c298245063.manifest
+/unity/My project/Assets/AssetBundles/aa3df974b5c97f83cdac051f18f5cf0a
+/unity/My project/Assets/AssetBundles/aa3df974b5c97f83cdac051f18f5cf0a.manifest
+/unity/My project/Assets/AssetBundles/b40ac65c92f4f83ebb9a7af614aee436
+/unity/My project/Assets/AssetBundles/b40ac65c92f4f83ebb9a7af614aee436.manifest
+/unity/My project/Assets/AssetBundles/b53b8e9c4da00b1dfaa5d21828421589
+/unity/My project/Assets/AssetBundles/b53b8e9c4da00b1dfaa5d21828421589.manifest
+/unity/My project/Assets/AssetBundles/c75f1e11fbf4423be1a7483de706e974
+/unity/My project/Assets/AssetBundles/c75f1e11fbf4423be1a7483de706e974.manifest
+/unity/My project/Assets/AssetBundles/c3175962a0fb69b1cffb572da4140261
+/unity/My project/Assets/AssetBundles/c3175962a0fb69b1cffb572da4140261.manifest
+/unity/My project/Assets/AssetBundles/cddb396227d21e4bc5abd5de605fb08a
+/unity/My project/Assets/AssetBundles/cddb396227d21e4bc5abd5de605fb08a.manifest
+/unity/My project/Assets/AssetBundles/d127ea709154674947c6acdab7d74a47
+/unity/My project/Assets/AssetBundles/d127ea709154674947c6acdab7d74a47.manifest

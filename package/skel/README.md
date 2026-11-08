@@ -35,3 +35,8 @@ Revives a player once per upgraded level. Upgrade levels are lost on reviving!
 ## Inventory Slot upgrade
 
 Each level adds a new inventory slot, up to maximum of 9 slots (configurable)
+
+## Safe Trigger upgrade
+
+Each level adds a chance to not consume an item/charge, configurable 10% per level
+

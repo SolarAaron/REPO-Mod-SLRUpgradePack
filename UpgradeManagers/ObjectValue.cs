@@ -27,7 +27,7 @@ public class ObjectValueUpgrade : UpgradeBase<float> {
         SurplusPercentScale = config.Bind("Object Value Upgrade", "Surplus Scaled Percentage", 0.1f, "Percentage of the extraction surplus bag that is scaled by this upgrade");
     }
 
-    public override float Calculate(float value, PlayerAvatar player, int level) =>
+    public override float Calculate(float value, PlayerAvatar? player, int level) =>
         DefaultCalculateFloatIncrease(this, "ObjectValue", value, player, level);
 }
 
@@ -51,8 +51,6 @@ public class ValuableObjectValuePatch {
     private static readonly ConditionalWeakTable<ValuableObject, ExtractionGoalValueData> ExtractionGoalValues = new();
     private static readonly FieldInfo DollarValueCurrentField =
         Field(typeof(ValuableObject), "dollarValueCurrent")!;
-    private static readonly FieldInfo RoundDirectorHaulGoalMaxField =
-        Field(typeof(RoundDirector), "haulGoalMax")!;
     private static readonly MethodInfo GetExtractionGoalValueMethod =
         Method(typeof(ValuableObjectValuePatch), nameof(GetExtractionGoalValue), [typeof(ValuableObject)])!;
 
@@ -181,53 +179,60 @@ public class ValuableObjectValuePatch {
         return patchedInstructions;
     }
 
-    internal static IEnumerable<CodeInstruction> ReplaceExtractionGoalValueLoad(
-        IEnumerable<CodeInstruction> instructions) {
-        var replacements = 0;
-        var patchedInstructions = instructions.Select(instruction => new CodeInstruction(instruction)).ToList();
-
-        for (var i = 0; i < patchedInstructions.Count - 3; i++) {
-            var instruction = patchedInstructions[i];
-            if (!instruction.LoadsField(DollarValueCurrentField) ||
-                patchedInstructions[i + 1].opcode != OpCodes.Conv_I4 ||
-                patchedInstructions[i + 2].opcode != OpCodes.Add ||
-                !patchedInstructions[i + 3].StoresField(RoundDirectorHaulGoalMaxField))
-                continue;
-
-            instruction.opcode = OpCodes.Call;
-            instruction.operand = GetExtractionGoalValueMethod;
-            replacements++;
-        }
-
-        if (replacements != 1)
-            SLRUpgradePack.Logger.LogWarning(
-                $"Expected one value read when building RoundDirector.haulGoalMax, replaced {replacements}.");
-
-        return patchedInstructions;
-    }
 }
 
 [HarmonyPatch]
 public static class ValuableObjectExtractionGoalValuePatch {
+    private static FieldInfo? ValuableObjectField;
+    private static readonly FieldInfo HaulGoalMaxField = Field(typeof(RoundDirector), "haulGoalMax")!;
+
     private static IEnumerable<MethodBase> TargetMethods() {
         var dollarValueSetMethod = Method(typeof(ValuableObject), "DollarValueSet");
         var stateMachineType = dollarValueSetMethod?.GetCustomAttribute<IteratorStateMachineAttribute>()?.StateMachineType
             ?? typeof(ValuableObject).GetNestedTypes(BindingFlags.NonPublic)
                 .FirstOrDefault(type => type.Name.StartsWith("<DollarValueSet>d__", StringComparison.Ordinal));
         var moveNextMethod = stateMachineType == null ? null : Method(stateMachineType, "MoveNext");
-        if (moveNextMethod == null) {
+        ValuableObjectField = stateMachineType == null ? null : Field(stateMachineType, "<>4__this");
+        if (moveNextMethod == null || ValuableObjectField == null) {
             SLRUpgradePack.Logger.LogWarning(
-                "Could not locate ValuableObject.DollarValueSet's iterator; extraction-goal value patch was skipped.");
+                "Could not locate ValuableObject.DollarValueSet's iterator owner; extraction-goal correction was skipped.");
             yield break;
         }
 
         yield return moveNextMethod;
     }
 
-    // Ignore Object Value's bonus only when REPO accumulates the level's extraction goal.
-    [HarmonyTranspiler]
-    private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) =>
-        ValuableObjectValuePatch.ReplaceExtractionGoalValueLoad(instructions);
+    // DollarValueSet adds the current value to the level goal at the end of its iterator. Let the
+    // original iterator run, then correct only that contribution to use its pre-upgrade value.
+    [HarmonyPrefix]
+    private static void Prefix(out int __state) {
+        var roundDirector = RoundDirector.instance;
+        __state = roundDirector ? (int)HaulGoalMaxField.GetValue(roundDirector)! : 0;
+    }
+
+    [HarmonyPostfix]
+    private static void Postfix(object __instance, bool __result, int __state) {
+        if (__result || ValuableObjectField == null) return;
+
+        var roundDirector = RoundDirector.instance;
+        var valuable = ValuableObjectField.GetValue(__instance) as ValuableObject;
+        if (!roundDirector || !valuable) return;
+
+        var currentValue = (int)ValuableObjectValuePatch.DollarValueCurrentRef.Invoke(valuable);
+        var goalValue = (int)ValuableObjectValuePatch.GetExtractionGoalValue(valuable);
+        if (currentValue == goalValue) return;
+
+        var currentGoal = (int)HaulGoalMaxField.GetValue(roundDirector)!;
+        var expectedCurrentGoal = unchecked(__state + currentValue);
+        if (currentGoal != expectedCurrentGoal) {
+            SLRUpgradePack.Logger.LogWarning(
+                $"Could not reconcile extraction goal after DollarValueSet for {valuable.name}: " +
+                $"expected {expectedCurrentGoal}, observed {currentGoal}; leaving the original total unchanged.");
+            return;
+        }
+
+        HaulGoalMaxField.SetValue(roundDirector, unchecked(__state + goalValue));
+    }
 }
 
 [HarmonyPatch(typeof(ValuableDirector), "SpawnValuable")]
